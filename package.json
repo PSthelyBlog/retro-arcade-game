@@ -1,0 +1,40 @@
+{
+  "name": "retro-arcade-game",
+  "version": "1.0.0",
+  "description": "A classic Space Invaders clone built with vanilla JavaScript and HTML5 Canvas",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:gh-pages": "GITHUB_PAGES=true vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src tests --ext .js",
+    "lint:fix": "eslint src tests --ext .js --fix",
+    "deploy": "npm run build:gh-pages && npx gh-pages -d dist"
+  },
+  "keywords": [
+    "game",
+    "arcade",
+    "space-invaders",
+    "canvas",
+    "javascript",
+    "retro"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.0.0",
+    "eslint": "^9.0.0",
+    "gh-pages": "^6.2.0",
+    "jsdom": "^25.0.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.0.0"
+  },
+  "homepage": "https://your-username.github.io/retro-arcade-game/",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
