@@ -260,6 +260,73 @@ export const ENEMY = {
 };
 ```
 
+## 🚀 Roadmap: Future Implementations
+
+The following features are planned for future updates, organized by priority and complexity.
+
+### Phase 1: Quick Wins (1-2 hours each)
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **Name Entry** | High | Classic arcade-style initials entry for high scores |
+| **Background Starfield** | Low | Parallax scrolling stars for visual polish |
+| **Endless Mode** | High | Continuous waves with increasing difficulty |
+
+### Phase 2: Gameplay Enhancements (3-4 hours each)
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **Power-ups System** | High | Collectible power-ups (shields, rapid fire, multi-shot, bomb) dropped by enemies |
+| **Touch Controls** | High | On-screen virtual buttons for mobile play |
+| **Background Music** | High | Looping chiptune background track |
+| **Combo System** | Medium | Bonus points for destroying enemies in quick succession |
+| **Wave/Formation Patterns** | Medium | Different enemy formations per level (V-shape, diamond, spiral) |
+
+### Phase 3: Visual & Audio Polish (4+ hours each)
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **Sprite Sheets** | High | Replace canvas-drawn shapes with pixel art sprites |
+| **Particle Effects** | Medium | Particles for explosions, thrust, bullet trails |
+| **PWA Support** | Medium | Service worker for offline installable game |
+| **Audio Volume Controls** | Medium | Volume slider in settings menu |
+| **Enemy Death Animations** | Medium | More elaborate explosion sequences |
+
+### Phase 4: New Game Modes
+
+| Feature | Priority | Complexity | Description |
+|---------|----------|------------|-------------|
+| **Time Attack** | Medium | Low | Score as many points in 2 minutes |
+| **Practice Mode** | Low | Low | Invincibility for learning controls |
+| **Boss Battles** | Medium | High | Boss enemy at the end of every 5 levels |
+| **Two Player** | Low | High | Local co-op or competitive mode |
+
+### Phase 5: Progression & Social
+
+| Feature | Priority | Complexity | Description |
+|---------|----------|------------|-------------|
+| **Achievements** | Medium | Medium | Unlockable badges (10K points, 100 kills, etc.) |
+| **Statistics Tracking** | Low | Low | Track total kills, time played, accuracy |
+| **Online Leaderboard** | Medium | High | Global high scores via backend API |
+
+### Phase 6: Technical Improvements
+
+| Feature | Priority | Complexity | Description |
+|---------|----------|------------|-------------|
+| **External Config File** | High | Low | JSON config for game balance (easier tuning) |
+| **Object Pooling** | Medium | Medium | Recycle projectile/explosion objects for performance |
+| **Responsive Canvas** | Medium | Low | Better scaling for different screen sizes |
+| **Save State** | Low | Medium | Continue from where player left off |
+| **TypeScript Migration** | Low | High | Add type safety for better maintainability |
+| **E2E Testing** | Low | Medium | Add Playwright tests for gameplay flows |
+| **Accessibility Options** | Low | Medium | High contrast mode, colorblind-friendly palette |
+
+### How to Contribute
+
+Want to implement one of these features? See the [Contributing](#-contributing) section below!
+
+---
+
 ## 📝 Contributing
 
 1. Fork the repository
