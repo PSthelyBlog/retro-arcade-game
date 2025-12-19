@@ -101,6 +101,19 @@ export const NAME_ENTRY = {
   CONFIRM_DELAY: 500,            // Delay after confirming name
 };
 
+/**
+ * Starfield parallax scrolling configuration
+ * Defines layered star fields for depth effect in background
+ */
+export const STARFIELD = {
+  LAYERS: [
+    { count: 50, size: 1, speed: 0.2, color: '#444444' },  // Far (dim, slow)
+    { count: 40, size: 2, speed: 0.5, color: '#888888' },  // Mid (medium)
+    { count: 30, size: 3, speed: 1.0, color: '#FFFFFF' },  // Near (bright, fast)
+  ],
+  BASE_SPEED: 50, // pixels per second at speed 1.0
+};
+
 export const Keys = {
   LEFT: ['ArrowLeft', 'KeyA'],
   RIGHT: ['ArrowRight', 'KeyD'],
