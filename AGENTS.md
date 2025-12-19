@@ -37,23 +37,262 @@
 
 ## Lead/Worker Pattern
 
-This project is scaffolded using the **lead/worker multi-agent pattern**:
+This project is designed for the **lead/worker multi-agent pattern** — an AI development methodology where a lead agent orchestrates multiple specialized worker agents to implement features in parallel.
 
-### Lead Agent (Opus 4)
-- **Role**: Orchestrates scaffolding, makes architectural decisions
-- **Responsibilities**:
-  - Project structure design
-  - Code review coordination
-  - Integration decisions
-  - Final quality assurance
+### Why Lead/Worker?
+
+| Benefit | Description |
+|---------|-------------|
+| **Parallelization** | Multiple tasks execute simultaneously |
+| **Specialization** | Workers focus on specific domains (rendering, tests, etc.) |
+| **Quality** | Lead reviews and integrates worker outputs |
+| **Efficiency** | 90%+ performance improvement on complex tasks |
+
+### Agent Hierarchy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     LEAD AGENT (Opus 4)                     │
+│  Orchestrates, plans, reviews, integrates                   │
+└───────────────────────┬─────────────────────────────────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+        ▼               ▼               ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+│ Worker Agent  │ │ Worker Agent  │ │ Worker Agent  │
+│ (Haiku/Sonnet)│ │ (Haiku/Sonnet)│ │ (Haiku/Sonnet)│
+│ game-engine   │ │ renderer      │ │ test-writer   │
+└───────────────┘ └───────────────┘ └───────────────┘
+```
+
+### Lead Agent Responsibilities (Opus 4)
+
+1. **Task Decomposition**: Break features into parallelizable subtasks
+2. **Worker Assignment**: Delegate subtasks to appropriate specialized workers
+3. **Context Provision**: Provide workers with necessary file context and instructions
+4. **Integration**: Combine worker outputs into cohesive implementation
+5. **Quality Assurance**: Review, test, and verify combined output
 
 ### Worker Agents (Haiku 4 / Sonnet 4)
-- **game-engine-agent**: Implements game loop, physics, collision detection
-- **renderer-agent**: Canvas rendering, sprite drawing, animations
-- **entity-agent**: Player, enemies, projectiles, power-ups
-- **audio-agent**: Sound effects, background music (Web Audio API)
-- **test-agent**: Unit tests, integration tests, coverage
-- **docs-agent**: README, API docs, inline comments
+
+| Agent | Location | Specialization |
+|-------|----------|----------------|
+| `game-engine` | `.claude/agents/game-engine.md` | Game loop, physics, state management |
+| `renderer` | `.claude/agents/renderer.md` | Canvas drawing, animations, effects |
+| `entity` | `.claude/agents/entity.md` | Player, enemies, projectiles |
+| `audio` | `.claude/agents/audio.md` | Web Audio API, sound synthesis |
+| `test-writer` | `.claude/agents/test-writer.md` | Unit tests, integration tests |
+| `docs-writer` | `.claude/agents/docs-writer.md` | README, API docs, comments |
+| `controller` | `.claude/agents/controller.md` | Gamepad/controller support |
+
+---
+
+## How to Use Lead/Worker Pattern
+
+### Step 1: Analyze the Task
+
+When receiving a feature request (e.g., GitHub Issue), the lead agent should:
+
+```markdown
+1. Read the issue requirements
+2. Identify which worker specializations are needed
+3. Break the task into parallelizable subtasks
+4. Determine dependencies between subtasks
+```
+
+### Step 2: Decompose into Subtasks
+
+**Example**: Issue #1 "Add name entry for high scores"
+
+| Subtask | Worker Agent | Dependencies |
+|---------|--------------|--------------|
+| NameEntryManager class | `game-engine` | None |
+| drawNameEntry() method | `renderer` | None |
+| Input key detection | `game-engine` | None |
+| Unit tests | `test-writer` | After implementation |
+| Update documentation | `docs-writer` | After implementation |
+
+### Step 3: Launch Workers in Parallel
+
+Use the `Task` tool with `subagent_type="general-purpose"` to spawn workers:
+
+```javascript
+// Lead agent spawns multiple workers in a SINGLE message
+// (parallel execution for independent tasks)
+
+Task(
+  subagent_type="general-purpose",
+  model="haiku",  // Use cost-efficient model for focused tasks
+  prompt=`
+    You are the game-engine worker agent.
+    Read .claude/agents/game-engine.md for your role instructions.
+
+    TASK: Implement NameEntryManager class
+
+    Files to read first:
+    - src/constants.js (for NAME_ENTRY config)
+    - src/managers/score-manager.js (for integration)
+
+    Requirements:
+    - Create src/managers/name-entry-manager.js
+    - Support 3-character initials (A-Z, 0-9)
+    - Handle cursor position (0, 1, 2)
+    - Cycle characters with up/down
+    - Confirm with Enter or Space
+
+    Write the file when ready.
+  `
+)
+
+Task(
+  subagent_type="general-purpose",
+  model="haiku",
+  prompt=`
+    You are the renderer worker agent.
+    Read .claude/agents/renderer.md for your role instructions.
+
+    TASK: Add drawNameEntry() method to CanvasRenderer
+
+    Files to read first:
+    - src/renderer/canvas-renderer.js (existing methods)
+    - src/constants.js (COLORS, GAME dimensions)
+
+    Requirements:
+    - Display "ENTER YOUR INITIALS" title
+    - Show 3 character slots with current letters
+    - Blinking cursor on active slot
+    - Retro pixel font styling
+
+    Edit the file when ready.
+  `
+)
+```
+
+### Step 4: Sequential Tasks (with Dependencies)
+
+For tasks that depend on others, launch them after the parallel tasks complete:
+
+```javascript
+// After implementation workers complete, launch test-writer
+Task(
+  subagent_type="general-purpose",
+  model="haiku",
+  prompt=`
+    You are the test-writer worker agent.
+    Read .claude/agents/test-writer.md for your role instructions.
+
+    TASK: Write unit tests for name entry feature
+
+    Files to read first:
+    - src/managers/name-entry-manager.js (the implementation)
+    - tests/setup.js (test helpers)
+
+    Requirements:
+    - Test character cycling
+    - Test cursor movement
+    - Test confirmation
+    - Test boundary conditions
+
+    Create tests/managers/name-entry-manager.test.js
+  `
+)
+```
+
+### Step 5: Integration & Review
+
+After workers complete:
+
+1. **Verify outputs**: Check that each file was created/modified correctly
+2. **Run tests**: `npm test` to ensure no regressions
+3. **Run build**: `npm run build` to check for errors
+4. **Manual review**: Scan code for consistency and integration issues
+5. **Final adjustments**: Make any necessary integration fixes
+
+---
+
+## Worker Agent Prompt Template
+
+When spawning a worker, use this template:
+
+```markdown
+You are the {agent-name} worker agent.
+Read .claude/agents/{agent-name}.md for your role instructions.
+Read AGENTS.md for project conventions.
+
+TASK: {One-line description}
+
+CONTEXT:
+- {Why this task is needed}
+- {How it fits into the larger feature}
+
+FILES TO READ:
+- {file1.js} (reason)
+- {file2.js} (reason)
+
+REQUIREMENTS:
+- {Requirement 1}
+- {Requirement 2}
+- {Requirement 3}
+
+OUTPUT:
+- {What file(s) to create/modify}
+
+QUALITY CHECKLIST:
+- [ ] Follows project code conventions
+- [ ] Uses constants from constants.js
+- [ ] Handles edge cases
+- [ ] Includes inline comments for complex logic
+```
+
+---
+
+## Example: Implementing a Feature
+
+### GitHub Issue: "Add Endless Mode"
+
+**Lead Agent Analysis:**
+
+```
+Feature: Endless Mode - continuous waves with increasing difficulty
+Subtasks:
+1. Add GameState.ENDLESS and game mode selection (game-engine)
+2. Create endless wave generation logic (game-engine)
+3. Add endless mode UI on start screen (renderer)
+4. Update high score to track endless mode separately (game-engine)
+5. Write tests (test-writer) - AFTER 1-4
+6. Update README (docs-writer) - AFTER 1-4
+```
+
+**Parallel Worker Launches:**
+
+```javascript
+// Workers 1, 2, 3, 4 can run in parallel (no dependencies)
+Task(subagent_type="general-purpose", model="haiku", prompt="[game-engine] Add ENDLESS state...")
+Task(subagent_type="general-purpose", model="haiku", prompt="[game-engine] Wave generation...")
+Task(subagent_type="general-purpose", model="haiku", prompt="[renderer] Endless mode UI...")
+Task(subagent_type="general-purpose", model="haiku", prompt="[game-engine] Endless high scores...")
+```
+
+**Sequential Workers (after parallel complete):**
+
+```javascript
+// Workers 5, 6 depend on 1-4 completing
+Task(subagent_type="general-purpose", model="haiku", prompt="[test-writer] Tests for endless mode...")
+Task(subagent_type="general-purpose", model="haiku", prompt="[docs-writer] Update README...")
+```
+
+---
+
+## Model Selection Guide
+
+| Model | Use For | Cost |
+|-------|---------|------|
+| **Opus 4** | Lead agent, complex architectural decisions | High |
+| **Sonnet 4** | Workers doing complex implementation | Medium |
+| **Haiku 4** | Workers doing focused, well-scoped tasks | Low |
+
+**Rule of thumb**: Use Haiku for workers when the task is clearly defined with specific file inputs/outputs. Use Sonnet for workers when the task requires more reasoning.
 
 ## Code Conventions
 
