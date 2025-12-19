@@ -87,15 +87,30 @@ export const GameState = {
   PAUSED: 'paused',
   GAME_OVER: 'gameover',
   LEVEL_COMPLETE: 'levelcomplete',
+  NAME_ENTRY: 'nameentry',
+};
+
+/**
+ * Name entry configuration for high score
+ */
+export const NAME_ENTRY = {
+  MAX_INITIALS: 3,               // Classic arcade: 3 characters
+  ALLOWED_CHARS: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ',
+  DEFAULT_CHAR: 'A',
+  BLINK_RATE: 300,               // Cursor blink rate in ms
+  CONFIRM_DELAY: 500,            // Delay after confirming name
 };
 
 export const Keys = {
   LEFT: ['ArrowLeft', 'KeyA'],
   RIGHT: ['ArrowRight', 'KeyD'],
+  UP: ['ArrowUp', 'KeyW'],
+  DOWN: ['ArrowDown', 'KeyS'],
   FIRE: ['Space'],
   PAUSE: ['KeyP'],
   RESTART: ['KeyR'],
   MUTE: ['KeyM'],
+  CONFIRM: ['Enter'],
 };
 
 /**

@@ -121,8 +121,11 @@ export class InputHandler {
     return (
       Keys.LEFT.includes(code) ||
       Keys.RIGHT.includes(code) ||
+      Keys.UP.includes(code) ||
+      Keys.DOWN.includes(code) ||
       Keys.FIRE.includes(code) ||
-      Keys.PAUSE.includes(code)
+      Keys.PAUSE.includes(code) ||
+      Keys.CONFIRM.includes(code)
     );
   }
 
@@ -467,6 +470,99 @@ export class InputHandler {
     if (this.isGamepadButtonJustPressed(GamepadButtons.Y)) return true;
 
     return false;
+  }
+
+  // ======================
+  // NAME ENTRY INPUT
+  // ======================
+
+  /**
+   * Check if up was just pressed (keyboard or gamepad)
+   * @returns {boolean}
+   */
+  isUpJustPressed() {
+    // Keyboard
+    if (this.isKeyJustPressed(Keys.UP)) return true;
+
+    // Gamepad D-Pad
+    if (this.isGamepadButtonJustPressed(GamepadButtons.DPAD_UP)) return true;
+
+    return false;
+  }
+
+  /**
+   * Check if down was just pressed (keyboard or gamepad)
+   * @returns {boolean}
+   */
+  isDownJustPressed() {
+    // Keyboard
+    if (this.isKeyJustPressed(Keys.DOWN)) return true;
+
+    // Gamepad D-Pad
+    if (this.isGamepadButtonJustPressed(GamepadButtons.DPAD_DOWN)) return true;
+
+    return false;
+  }
+
+  /**
+   * Check if left was just pressed (keyboard or gamepad)
+   * @returns {boolean}
+   */
+  isLeftJustPressed() {
+    // Keyboard
+    if (this.isKeyJustPressed(Keys.LEFT)) return true;
+
+    // Gamepad D-Pad
+    if (this.isGamepadButtonJustPressed(GamepadButtons.DPAD_LEFT)) return true;
+
+    return false;
+  }
+
+  /**
+   * Check if right was just pressed (keyboard or gamepad)
+   * @returns {boolean}
+   */
+  isRightJustPressed() {
+    // Keyboard
+    if (this.isKeyJustPressed(Keys.RIGHT)) return true;
+
+    // Gamepad D-Pad
+    if (this.isGamepadButtonJustPressed(GamepadButtons.DPAD_RIGHT)) return true;
+
+    return false;
+  }
+
+  /**
+   * Check if confirm/enter was just pressed (keyboard or gamepad)
+   * @returns {boolean}
+   */
+  isConfirmJustPressed() {
+    // Keyboard - Enter or Space
+    if (this.isKeyJustPressed(Keys.CONFIRM)) return true;
+    if (this.isKeyJustPressed(Keys.FIRE)) return true;
+
+    // Gamepad - A button
+    if (this.isGamepadButtonJustPressed(GamepadButtons.A)) return true;
+
+    return false;
+  }
+
+  /**
+   * Get the last typed character (for direct keyboard input)
+   * Returns the most recent alphanumeric key pressed
+   * @returns {string|null}
+   */
+  getTypedChar() {
+    // Check for letter keys (A-Z)
+    for (const code of this.justPressed) {
+      if (code.startsWith('Key')) {
+        return code.slice(3); // 'KeyA' -> 'A'
+      }
+      if (code.startsWith('Digit')) {
+        return code.slice(5); // 'Digit1' -> '1'
+      }
+    }
+    return null;
   }
 
   // Legacy support - keep isHeld working for keyboard
