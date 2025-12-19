@@ -1,5 +1,6 @@
 import { GAME, GameState, BUNKER, MYSTERY_SHIP } from './constants.js';
 import { CanvasRenderer } from './renderer/canvas-renderer.js';
+import { Starfield } from './renderer/starfield.js';
 import { InputHandler } from './managers/input-handler.js';
 import { EnemyManager } from './managers/enemy-manager.js';
 import { ProjectileManager } from './managers/projectile-manager.js';
@@ -19,6 +20,7 @@ export class Game {
   constructor() {
     // Core systems
     this.renderer = new CanvasRenderer('gameCanvas');
+    this.starfield = new Starfield();
     this.input = new InputHandler();
     this.enemyManager = new EnemyManager();
     this.projectileManager = new ProjectileManager();
@@ -99,6 +101,9 @@ export class Game {
    * @param {number} deltaTime - Time since last frame
    */
   update(deltaTime) {
+    // Always update starfield (renders in all states)
+    this.starfield.update(deltaTime);
+
     // Handle mute toggle in any state
     if (this.input.isMuteJustPressed()) {
       this.soundManager.toggleMute();
@@ -557,7 +562,9 @@ export class Game {
 
     switch (this.state) {
       case GameState.MENU:
-        // Use the enhanced start screen with high scores
+        // Draw starfield background, then start screen with high scores
+        this.renderer.clear();
+        this.starfield.draw(ctx);
         this.renderer.drawStartScreenWithScores(controllerStatus, highScores);
         break;
 
@@ -603,6 +610,9 @@ export class Game {
     const ctx = this.renderer.getContext();
 
     this.renderer.clear();
+
+    // Draw starfield (background - behind all game elements)
+    this.starfield.draw(ctx);
 
     // Draw bunkers
     for (const bunker of this.bunkers) {

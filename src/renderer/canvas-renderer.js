@@ -219,12 +219,10 @@ export class CanvasRenderer {
 
   /**
    * Draw start screen
+   * Note: Does not clear canvas - starfield is drawn behind in game.js
    * @param {Object} [controllerStatus] - Controller connection status
    */
   drawStartScreen(controllerStatus = null) {
-    this.ctx.fillStyle = GAME.BACKGROUND_COLOR;
-    this.ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
-
     // Title
     this.ctx.fillStyle = '#00FF00';
     this.ctx.font = `36px ${UI.FONT_FAMILY}`;
@@ -549,8 +547,7 @@ export class CanvasRenderer {
    * @param {Array} [highScores=[]] - High scores to display
    */
   drawStartScreenWithScores(controllerStatus = null, highScores = []) {
-    this.ctx.fillStyle = GAME.BACKGROUND_COLOR;
-    this.ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
+    // Note: Canvas clearing and starfield are handled by Game.render()
 
     // Title
     this.ctx.fillStyle = '#00FF00';
