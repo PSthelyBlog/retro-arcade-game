@@ -5,6 +5,7 @@ import { EnemyManager } from './managers/enemy-manager.js';
 import { ProjectileManager } from './managers/projectile-manager.js';
 import { CollisionDetector } from './managers/collision-detector.js';
 import { ScoreManager } from './managers/score-manager.js';
+import { NameEntryManager } from './managers/name-entry-manager.js';
 import { SoundManager } from './audio/sound-manager.js';
 import { Player } from './entities/player.js';
 import { Bunker } from './entities/bunker.js';
@@ -22,6 +23,7 @@ export class Game {
     this.enemyManager = new EnemyManager();
     this.projectileManager = new ProjectileManager();
     this.scoreManager = new ScoreManager();
+    this.nameEntryManager = new NameEntryManager();
     this.soundManager = new SoundManager();
 
     // Game state
@@ -42,6 +44,9 @@ export class Game {
     // Level transition
     this.levelTransitionTimer = 0;
     this.levelTransitionDuration = 2000;
+
+    // Name entry tracking
+    this.newHighScoreRank = 0;
 
     // Bind methods
     this.gameLoop = this.gameLoop.bind(this);
@@ -114,6 +119,9 @@ export class Game {
         break;
       case GameState.LEVEL_COMPLETE:
         this.updateLevelComplete(deltaTime);
+        break;
+      case GameState.NAME_ENTRY:
+        this.updateNameEntry(deltaTime);
         break;
     }
 
@@ -213,6 +221,68 @@ export class Game {
     if (this.levelTransitionTimer >= this.levelTransitionDuration) {
       this.startNextLevel();
     }
+  }
+
+  /**
+   * Update name entry state
+   * @param {number} deltaTime
+   */
+  updateNameEntry(deltaTime) {
+    // Check if delay after confirmation is complete
+    if (this.nameEntryManager.isConfirmed()) {
+      if (this.nameEntryManager.update(deltaTime)) {
+        // Transition to game over screen (now showing high scores)
+        this.state = GameState.GAME_OVER;
+      }
+      return;
+    }
+
+    // Handle direct character input (typing letters)
+    const typedChar = this.input.getTypedChar();
+    if (typedChar) {
+      const isComplete = this.nameEntryManager.inputChar(typedChar);
+      this.soundManager.playShoot(); // Use shoot sound for feedback
+      if (isComplete) {
+        this.saveHighScore();
+      }
+      return;
+    }
+
+    // Handle up/down for character selection
+    if (this.input.isUpJustPressed()) {
+      this.nameEntryManager.nextChar();
+      this.soundManager.playShoot();
+    }
+    if (this.input.isDownJustPressed()) {
+      this.nameEntryManager.prevChar();
+      this.soundManager.playShoot();
+    }
+
+    // Handle left/right for cursor movement
+    if (this.input.isLeftJustPressed()) {
+      this.nameEntryManager.prevPosition();
+    }
+    if (this.input.isRightJustPressed()) {
+      this.nameEntryManager.nextPosition();
+    }
+
+    // Handle confirm (advance or submit)
+    if (this.input.isConfirmJustPressed()) {
+      const isComplete = this.nameEntryManager.confirm();
+      this.soundManager.playShoot();
+      if (isComplete) {
+        this.saveHighScore();
+      }
+    }
+  }
+
+  /**
+   * Save high score after name entry
+   */
+  saveHighScore() {
+    const initials = this.nameEntryManager.getInitials();
+    this.newHighScoreRank = this.scoreManager.addHighScore(initials);
+    this.soundManager.playLevelComplete();
   }
 
   /**
@@ -375,6 +445,7 @@ export class Game {
     this.explosions = [];
     this.mysteryShip = null;
     this.mysteryShipTimer = 0;
+    this.newHighScoreRank = 0;
 
     this.player = new Player();
     this.createBunkers();
@@ -417,8 +488,21 @@ export class Game {
    * Handle game over
    */
   gameOver() {
-    this.state = GameState.GAME_OVER;
-    this.soundManager.playGameOver();
+    // Update level in score manager for high score tracking
+    this.scoreManager.setLevel(this.level);
+
+    // Check if player achieved a high score
+    if (this.scoreManager.isHighScore()) {
+      // Show name entry screen
+      this.nameEntryManager.reset();
+      this.newHighScoreRank = this.scoreManager.getScoreRank();
+      this.state = GameState.NAME_ENTRY;
+      this.soundManager.playPowerUp(); // Play celebratory sound
+    } else {
+      // Regular game over
+      this.state = GameState.GAME_OVER;
+      this.soundManager.playGameOver();
+    }
   }
 
   /**
@@ -469,10 +553,12 @@ export class Game {
     const ctx = this.renderer.getContext();
     const controllerStatus = this.input.getControllerStatus();
     const hasController = controllerStatus.connected;
+    const highScores = this.scoreManager.getTopHighScores(5);
 
     switch (this.state) {
       case GameState.MENU:
-        this.renderer.drawStartScreen(controllerStatus);
+        // Use the enhanced start screen with high scores
+        this.renderer.drawStartScreenWithScores(controllerStatus, highScores);
         break;
 
       case GameState.PLAYING:
@@ -485,6 +571,18 @@ export class Game {
         } else if (this.state === GameState.LEVEL_COMPLETE) {
           this.renderer.drawLevelComplete(this.level);
         }
+        break;
+
+      case GameState.NAME_ENTRY:
+        this.renderGame();
+        this.renderer.drawNameEntry(
+          this.scoreManager.getScore(),
+          this.newHighScoreRank,
+          this.nameEntryManager.initials,
+          this.nameEntryManager.getCurrentPosition(),
+          this.nameEntryManager.isConfirmed(),
+          hasController
+        );
         break;
 
       case GameState.GAME_OVER:
