@@ -216,6 +216,7 @@ describe('InputHandler', () => {
         connected: false,
         name: '',
         count: 0,
+        touchActive: false,
       });
 
       const mockGamepad = createMockGamepad(0, new Array(17).fill(false));
@@ -225,6 +226,7 @@ describe('InputHandler', () => {
         connected: true,
         name: 'Xbox Controller',
         count: 1,
+        touchActive: false,
       });
     });
 

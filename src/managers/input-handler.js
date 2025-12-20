@@ -4,9 +4,10 @@ import {
   GamepadAxes,
   ControllerConfig,
 } from '../constants.js';
+import { TouchControlManager } from './touch-control-manager.js';
 
 /**
- * Handles keyboard and gamepad input
+ * Handles keyboard, gamepad, and touch input
  * Supports multiple controllers and provides unified input interface
  */
 export class InputHandler {
@@ -22,6 +23,9 @@ export class InputHandler {
     this.activeGamepadIndex = null; // Currently active gamepad
     this.controllerConnected = false;
     this.controllerName = '';
+
+    // Touch controls
+    this.touchControls = new TouchControlManager();
 
     this.enabled = true;
 
@@ -47,6 +51,9 @@ export class InputHandler {
       this.handleGamepadDisconnected
     );
 
+    // Touch controls
+    this.touchControls.start();
+
     // Check for already connected gamepads (Firefox requires this)
     this.pollGamepads();
   }
@@ -62,6 +69,7 @@ export class InputHandler {
       'gamepaddisconnected',
       this.handleGamepadDisconnected
     );
+    this.touchControls.stop();
   }
 
   // ======================
@@ -350,6 +358,7 @@ export class InputHandler {
    */
   clearJustPressed() {
     this.justPressed.clear();
+    this.touchControls.clearJustPressed();
   }
 
   /**
@@ -365,10 +374,13 @@ export class InputHandler {
   }
 
   /**
-   * Check if left movement is held (keyboard or gamepad)
+   * Check if left movement is held (keyboard, gamepad, or touch)
    * @returns {boolean}
    */
   isLeftHeld() {
+    // Touch controls
+    if (this.touchControls.isLeftHeld()) return true;
+
     // Keyboard
     if (this.isKeyHeld(Keys.LEFT)) return true;
 
@@ -382,10 +394,13 @@ export class InputHandler {
   }
 
   /**
-   * Check if right movement is held (keyboard or gamepad)
+   * Check if right movement is held (keyboard, gamepad, or touch)
    * @returns {boolean}
    */
   isRightHeld() {
+    // Touch controls
+    if (this.touchControls.isRightHeld()) return true;
+
     // Keyboard
     if (this.isKeyHeld(Keys.RIGHT)) return true;
 
@@ -399,10 +414,13 @@ export class InputHandler {
   }
 
   /**
-   * Check if fire was just pressed (keyboard or gamepad)
+   * Check if fire was just pressed (keyboard, gamepad, or touch)
    * @returns {boolean}
    */
   isFireJustPressed() {
+    // Touch controls
+    if (this.touchControls.isFireJustPressed()) return true;
+
     // Keyboard
     if (this.isKeyJustPressed(Keys.FIRE)) return true;
 
@@ -415,10 +433,13 @@ export class InputHandler {
   }
 
   /**
-   * Check if fire is held (keyboard or gamepad)
+   * Check if fire is held (keyboard, gamepad, or touch)
    * @returns {boolean}
    */
   isFireHeld() {
+    // Touch controls
+    if (this.touchControls.isFireHeld()) return true;
+
     // Keyboard
     if (this.isKeyHeld(Keys.FIRE)) return true;
 
@@ -431,10 +452,13 @@ export class InputHandler {
   }
 
   /**
-   * Check if pause was just pressed (keyboard or gamepad)
+   * Check if pause was just pressed (keyboard, gamepad, or touch)
    * @returns {boolean}
    */
   isPauseJustPressed() {
+    // Touch controls
+    if (this.touchControls.isPauseJustPressed()) return true;
+
     // Keyboard
     if (this.isKeyJustPressed(Keys.PAUSE)) return true;
 
@@ -575,6 +599,30 @@ export class InputHandler {
   }
 
   /**
+   * Check if touch controls are active
+   * @returns {boolean}
+   */
+  isTouchActive() {
+    return this.touchControls.isEnabled();
+  }
+
+  /**
+   * Get touch button positions for rendering
+   * @returns {Object} Button positions
+   */
+  getTouchButtonPositions() {
+    return this.touchControls.getButtonPositions();
+  }
+
+  /**
+   * Get touch button states for rendering
+   * @returns {Object} Button pressed states
+   */
+  getTouchButtonStates() {
+    return this.touchControls.getButtonStates();
+  }
+
+  /**
    * Get controller status for display
    * @returns {Object} Controller status info
    */
@@ -583,6 +631,7 @@ export class InputHandler {
       connected: this.controllerConnected,
       name: this.controllerName,
       count: this.gamepads.size,
+      touchActive: this.touchControls.isEnabled(),
     };
   }
 }
