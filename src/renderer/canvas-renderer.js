@@ -644,6 +644,285 @@ export class CanvasRenderer {
   }
 
   /**
+   * Draw mode selection screen (Classic vs Endless)
+   * @param {Object} [controllerStatus] - Controller connection status
+   * @param {number} [selectedMode=0] - Selected mode (0 = CLASSIC, 1 = ENDLESS)
+   */
+  drawModeSelectScreen(controllerStatus = null, selectedMode = 0) {
+    // Semi-transparent overlay
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    this.ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
+
+    this.ctx.textAlign = 'center';
+
+    // Title
+    this.ctx.fillStyle = '#00FF00';
+    this.ctx.font = `36px ${UI.FONT_FAMILY}`;
+    this.ctx.fillText('SELECT GAME MODE', GAME.WIDTH / 2, 100);
+
+    // Mode options
+    const modes = [
+      { name: 'CLASSIC', description: '10 LEVELS' },
+      { name: 'ENDLESS', description: 'INFINITE WAVES' }
+    ];
+
+    const optionY = [250, 350];
+    const optionWidth = 300;
+    const optionHeight = 70;
+
+    for (let i = 0; i < modes.length; i++) {
+      const x = (GAME.WIDTH - optionWidth) / 2;
+      const y = optionY[i] - optionHeight / 2;
+      const isSelected = i === selectedMode;
+
+      // Option background
+      this.ctx.fillStyle = isSelected ? '#003300' : '#111111';
+      this.ctx.fillRect(x, y, optionWidth, optionHeight);
+
+      // Option border - blinking if selected
+      let borderColor = '#444444';
+      if (isSelected) {
+        const blink = Math.floor(Date.now() / 300) % 2 === 0;
+        borderColor = blink ? '#00FF00' : '#00AA00';
+      }
+      this.ctx.strokeStyle = borderColor;
+      this.ctx.lineWidth = isSelected ? 3 : 2;
+      this.ctx.strokeRect(x, y, optionWidth, optionHeight);
+
+      // Selection indicator (arrow on left)
+      if (isSelected) {
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = `20px ${UI.FONT_FAMILY}`;
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText('>', x - 40, optionY[i] + 10);
+        this.ctx.textAlign = 'center';
+      }
+
+      // Mode name
+      this.ctx.fillStyle = isSelected ? '#00FF00' : '#FFFFFF';
+      this.ctx.font = `24px ${UI.FONT_FAMILY}`;
+      this.ctx.fillText(modes[i].name, GAME.WIDTH / 2, optionY[i] + 5);
+
+      // Mode description
+      this.ctx.fillStyle = isSelected ? '#00FF00' : '#888888';
+      this.ctx.font = `14px ${UI.FONT_FAMILY}`;
+      this.ctx.fillText(modes[i].description, GAME.WIDTH / 2, optionY[i] + 35);
+    }
+
+    // Instructions
+    this.ctx.fillStyle = '#AAAAAA';
+    this.ctx.font = `14px ${UI.FONT_FAMILY}`;
+    this.ctx.textAlign = 'center';
+
+    if (controllerStatus && controllerStatus.connected) {
+      this.ctx.fillText('D-PAD UP/DOWN TO SELECT', GAME.WIDTH / 2, 480);
+      this.ctx.fillText('PRESS A OR START TO CONFIRM', GAME.WIDTH / 2, 510);
+    } else {
+      this.ctx.fillText('UP/DOWN ARROW KEYS TO SELECT', GAME.WIDTH / 2, 480);
+      this.ctx.fillText('PRESS ENTER OR SPACE TO CONFIRM', GAME.WIDTH / 2, 510);
+    }
+
+    // Controller status indicator
+    if (controllerStatus) {
+      if (controllerStatus.connected) {
+        this.ctx.fillStyle = '#00FF00';
+        this.ctx.font = `12px ${UI.FONT_FAMILY}`;
+        this.ctx.fillText(`CONTROLLER: ${controllerStatus.name}`, GAME.WIDTH / 2, 555);
+      } else {
+        this.ctx.fillStyle = '#666666';
+        this.ctx.font = `12px ${UI.FONT_FAMILY}`;
+        this.ctx.fillText('NO CONTROLLER DETECTED', GAME.WIDTH / 2, 555);
+      }
+    }
+
+    this.ctx.textAlign = 'left';
+  }
+
+  /**
+   * Draw HUD for endless mode (shows wave instead of level)
+   * @param {number} score - Current score
+   * @param {number} highScore - High score
+   * @param {number} lives - Player lives
+   * @param {number} wave - Current wave
+   * @param {Object} [controllerStatus] - Controller connection status
+   */
+  drawHUDEndless(score, highScore, lives, wave, controllerStatus = null) {
+    this.ctx.fillStyle = UI.TEXT_COLOR;
+    this.ctx.font = `${UI.FONT_SIZE}px ${UI.FONT_FAMILY}`;
+
+    // Score
+    this.ctx.fillText(`SCORE: ${padNumber(score, 6)}`, UI.SCORE_X, UI.SCORE_Y);
+
+    // High Score
+    this.ctx.fillText(`HI: ${padNumber(highScore, 6)}`, UI.SCORE_X + 250, UI.SCORE_Y);
+
+    // Wave
+    const waveText = `WAVE ${wave}`;
+    this.ctx.fillText(waveText, UI.LEVEL_X + 100, UI.LEVEL_Y);
+
+    // Danger indicator for high waves (>= 15)
+    if (wave >= 15) {
+      const blink = Math.floor(Date.now() / 200) % 2 === 0;
+      if (blink) {
+        this.ctx.fillStyle = '#FF0000';
+        this.ctx.fillText('DANGER', UI.LEVEL_X + 100, UI.LEVEL_Y + 35);
+      }
+    }
+
+    // Lives
+    this.ctx.fillStyle = UI.TEXT_COLOR;
+    this.ctx.fillText(`LIVES: `, UI.LIVES_X, UI.LIVES_Y);
+
+    // Draw life icons
+    for (let i = 0; i < lives; i++) {
+      this.drawLifeIcon(UI.LIVES_X + 100 + i * 30, UI.LIVES_Y - 15);
+    }
+
+    // Controller indicator (bottom right)
+    if (controllerStatus && controllerStatus.connected) {
+      this.drawControllerIcon(GAME.WIDTH - 40, GAME.HEIGHT - 25);
+    }
+  }
+
+  /**
+   * Draw wave complete screen (endless mode)
+   * @param {number} wave - Completed wave number
+   * @param {number} [speedMultiplier=1.0] - Current speed multiplier
+   */
+  drawWaveComplete(wave, speedMultiplier = 1.0) {
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    this.ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
+
+    this.ctx.textAlign = 'center';
+
+    this.ctx.fillStyle = '#00FF00';
+    this.ctx.font = `40px ${UI.FONT_FAMILY}`;
+    this.ctx.fillText(`WAVE ${wave} COMPLETE!`, GAME.WIDTH / 2, GAME.HEIGHT / 2 - 40);
+
+    // Difficulty multiplier info
+    this.ctx.fillStyle = UI.TEXT_COLOR;
+    this.ctx.font = `24px ${UI.FONT_FAMILY}`;
+    this.ctx.fillText(`SPEED: ${speedMultiplier.toFixed(1)}X`, GAME.WIDTH / 2, GAME.HEIGHT / 2 + 30);
+
+    // Prompt to continue
+    this.ctx.fillStyle = '#AAAAAA';
+    this.ctx.font = `16px ${UI.FONT_FAMILY}`;
+    this.ctx.fillText('GET READY...', GAME.WIDTH / 2, GAME.HEIGHT / 2 + 80);
+
+    this.ctx.textAlign = 'left';
+  }
+
+  /**
+   * Draw start screen with high scores - updated to support game mode
+   * @param {Object} [controllerStatus] - Controller connection status
+   * @param {Array} [highScores=[]] - High scores to display
+   * @param {string} [gameMode='classic'] - Game mode ('classic' or 'endless')
+   */
+  drawStartScreenWithScores(controllerStatus = null, highScores = [], gameMode = 'classic') {
+    // Note: Canvas clearing and starfield are handled by Game.render()
+
+    // Title
+    this.ctx.fillStyle = '#00FF00';
+    this.ctx.font = `36px ${UI.FONT_FAMILY}`;
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('RETRO ARCADE', GAME.WIDTH / 2, 80);
+
+    this.ctx.fillStyle = '#FF6600';
+    this.ctx.fillText('SPACE INVADERS', GAME.WIDTH / 2, 120);
+
+    // Mode indicator
+    const modeText = gameMode === 'endless' ? 'ENDLESS MODE' : 'CLASSIC MODE';
+    const modeColor = gameMode === 'endless' ? '#FF6600' : '#00FF00';
+    this.ctx.fillStyle = modeColor;
+    this.ctx.font = `16px ${UI.FONT_FAMILY}`;
+    this.ctx.fillText(modeText, GAME.WIDTH / 2, 150);
+
+    // High scores (compact view)
+    if (highScores.length > 0) {
+      this.ctx.fillStyle = '#FFD700';
+      this.ctx.font = `14px ${UI.FONT_FAMILY}`;
+      this.ctx.fillText('HIGH SCORES', GAME.WIDTH / 2, 190);
+
+      this.ctx.font = `12px ${UI.FONT_FAMILY}`;
+      const displayScores = highScores.slice(0, 5);
+      let y = 215;
+      for (let i = 0; i < displayScores.length; i++) {
+        const entry = displayScores[i];
+        this.ctx.fillStyle = this.getRankColor(i + 1);
+        this.ctx.fillText(
+          `${i + 1}. ${entry.initials}  ${padNumber(entry.score, 6)}`,
+          GAME.WIDTH / 2,
+          y
+        );
+        y += 22;
+      }
+    }
+
+    // Instructions - Keyboard
+    this.ctx.fillStyle = '#AAAAAA';
+    this.ctx.font = `12px ${UI.FONT_FAMILY}`;
+    const instructionY = highScores.length > 0 ? 340 : 220;
+    this.ctx.fillText('KEYBOARD', GAME.WIDTH / 2, instructionY);
+
+    this.ctx.fillStyle = UI.TEXT_COLOR;
+    this.ctx.font = `14px ${UI.FONT_FAMILY}`;
+
+    const keyboardInstructions = [
+      '← →  or  A D  :  MOVE',
+      'SPACE  :  FIRE',
+      'P  :  PAUSE    M  :  MUTE',
+    ];
+
+    let y = instructionY + 25;
+    for (const line of keyboardInstructions) {
+      this.ctx.fillText(line, GAME.WIDTH / 2, y);
+      y += 28;
+    }
+
+    // Instructions - Controller
+    this.ctx.fillStyle = '#AAAAAA';
+    this.ctx.font = `12px ${UI.FONT_FAMILY}`;
+    this.ctx.fillText('CONTROLLER', GAME.WIDTH / 2, y + 10);
+
+    this.ctx.fillStyle = UI.TEXT_COLOR;
+    this.ctx.font = `14px ${UI.FONT_FAMILY}`;
+
+    const controllerInstructions = [
+      'D-PAD / STICK  :  MOVE',
+      'A / RB / RT  :  FIRE',
+      'START  :  PAUSE',
+    ];
+
+    y += 35;
+    for (const line of controllerInstructions) {
+      this.ctx.fillText(line, GAME.WIDTH / 2, y);
+      y += 28;
+    }
+
+    // Controller status indicator
+    if (controllerStatus) {
+      if (controllerStatus.connected) {
+        this.ctx.fillStyle = '#00FF00';
+        this.ctx.font = `12px ${UI.FONT_FAMILY}`;
+        this.ctx.fillText(`CONTROLLER: ${controllerStatus.name}`, GAME.WIDTH / 2, y + 15);
+      } else {
+        this.ctx.fillStyle = '#666666';
+        this.ctx.font = `12px ${UI.FONT_FAMILY}`;
+        this.ctx.fillText('NO CONTROLLER DETECTED', GAME.WIDTH / 2, y + 15);
+      }
+    }
+
+    // Blinking start text
+    if (Math.floor(Date.now() / 500) % 2 === 0) {
+      this.ctx.fillStyle = '#FFFF00';
+      this.ctx.font = `20px ${UI.FONT_FAMILY}`;
+      this.ctx.fillText('PRESS SPACE OR A TO START', GAME.WIDTH / 2, 570);
+    }
+
+    this.ctx.textAlign = 'left';
+  }
+
+  /**
    * Get canvas context for direct drawing
    * @returns {CanvasRenderingContext2D}
    */
