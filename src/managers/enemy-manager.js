@@ -11,6 +11,27 @@ export class EnemyManager {
     this.speed = ENEMY.BASE_SPEED;
     this.dropNext = false;
     this.totalEnemies = ENEMY.ROWS * ENEMY.COLS;
+
+    // Endless mode properties
+    this.wave = 1;
+    this.gameMode = 'classic'; // 'classic' or 'endless'
+    this.difficultyMultiplier = 1.0;
+  }
+
+  /**
+   * Set current wave number
+   * @param {number} wave - Wave number
+   */
+  setWave(wave) {
+    this.wave = Math.max(1, wave);
+  }
+
+  /**
+   * Set game mode
+   * @param {string} mode - Game mode ('classic' or 'endless')
+   */
+  setGameMode(mode) {
+    this.gameMode = mode === 'endless' ? 'endless' : 'classic';
   }
 
   /**
@@ -19,8 +40,17 @@ export class EnemyManager {
   createFormation() {
     this.enemies = [];
     this.direction = 1;
-    this.speed = ENEMY.BASE_SPEED;
     this.dropNext = false;
+
+    // Calculate difficulty multiplier for endless mode
+    if (this.gameMode === 'endless') {
+      const speedMultiplier = Math.min(1 + (this.wave - 1) * 0.05, 3.0);
+      this.difficultyMultiplier = speedMultiplier;
+      this.speed = ENEMY.BASE_SPEED * speedMultiplier;
+    } else {
+      this.difficultyMultiplier = 1.0;
+      this.speed = ENEMY.BASE_SPEED;
+    }
 
     for (let row = 0; row < ENEMY.ROWS; row++) {
       for (let col = 0; col < ENEMY.COLS; col++) {
@@ -112,7 +142,14 @@ export class EnemyManager {
 
     // Calculate speed based on remaining enemies
     const remainingRatio = active.length / this.totalEnemies;
-    this.speed = ENEMY.BASE_SPEED + (1 - remainingRatio) * 3;
+    let baseSpeed = ENEMY.BASE_SPEED + (1 - remainingRatio) * 3;
+
+    // Apply difficulty multiplier in endless mode
+    if (this.gameMode === 'endless') {
+      baseSpeed *= this.difficultyMultiplier;
+    }
+
+    this.speed = baseSpeed;
 
     // Check if we need to drop and reverse
     const bounds = this.getFormationBounds();
@@ -135,7 +172,16 @@ export class EnemyManager {
       enemy.update(deltaTime);
 
       // Check for enemy shots from bottom row
-      const shot = enemy.shoot();
+      let shot = enemy.shoot();
+      if (shot && this.gameMode === 'endless') {
+        // Scale fire chance in endless mode
+        const fireMultiplier = Math.min(1 + (this.wave - 1) * 0.03, 2.5);
+        // Apply fire multiplier by increasing the probability of actual fire
+        if (Math.random() < fireMultiplier - 1) {
+          // Additional shot beyond base probability
+          shot = enemy.shoot();
+        }
+      }
       if (shot) {
         projectiles.push(shot);
       }
@@ -163,6 +209,14 @@ export class EnemyManager {
   hasReachedBottom() {
     const bounds = this.getFormationBounds();
     return bounds.bottom >= GAME.HEIGHT - 100; // Near player
+  }
+
+  /**
+   * Get current difficulty multiplier
+   * @returns {number} Current difficulty multiplier
+   */
+  getDifficultyMultiplier() {
+    return this.difficultyMultiplier;
   }
 
   /**

@@ -69,6 +69,20 @@ export const SCORE = {
   EXTRA_LIFE_THRESHOLD: 10000,
 };
 
+/**
+ * Endless mode configuration for progressive difficulty
+ * Difficulty increases per wave with exponential scaling
+ */
+export const ENDLESS_MODE = {
+  SPEED_INCREASE_PER_WAVE: 0.05,        // 5% speed increase per wave
+  FIRE_RATE_INCREASE_PER_WAVE: 0.03,    // 3% fire rate increase per wave
+  MAX_SPEED_MULTIPLIER: 3.0,            // Cap at 3x speed
+  MAX_FIRE_RATE_MULTIPLIER: 2.5,        // Cap at 2.5x fire rate
+  MYSTERY_SHIP_INTERVAL_DECREASE: 0.05, // 5% shorter intervals per wave
+  MIN_MYSTERY_SHIP_INTERVAL: 8000,      // Minimum 8 seconds between mystery ships
+  DANGER_WAVE_THRESHOLD: 15,            // Show danger indicator after wave 15
+};
+
 export const UI = {
   FONT_SIZE: 20,
   FONT_FAMILY: '"Press Start 2P", monospace',
@@ -83,11 +97,20 @@ export const UI = {
 
 export const GameState = {
   MENU: 'menu',
+  MODE_SELECT: 'modeselect',
   PLAYING: 'playing',
   PAUSED: 'paused',
   GAME_OVER: 'gameover',
   LEVEL_COMPLETE: 'levelcomplete',
   NAME_ENTRY: 'nameentry',
+};
+
+/**
+ * Game mode selection
+ */
+export const GameMode = {
+  CLASSIC: 'classic',
+  ENDLESS: 'endless',
 };
 
 /**

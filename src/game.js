@@ -1,4 +1,4 @@
-import { GAME, GameState, BUNKER, MYSTERY_SHIP } from './constants.js';
+import { GAME, GameState, GameMode, BUNKER, MYSTERY_SHIP, ENDLESS_MODE } from './constants.js';
 import { CanvasRenderer } from './renderer/canvas-renderer.js';
 import { Starfield } from './renderer/starfield.js';
 import { InputHandler } from './managers/input-handler.js';
@@ -31,6 +31,9 @@ export class Game {
     // Game state
     this.state = GameState.MENU;
     this.level = 1;
+    this.wave = 1;
+    this.gameMode = GameMode.CLASSIC;
+    this.selectedModeIndex = 0; // 0 = CLASSIC, 1 = ENDLESS (for mode select UI)
     this.lastTime = 0;
 
     // Entities
@@ -113,6 +116,9 @@ export class Game {
       case GameState.MENU:
         this.updateMenu();
         break;
+      case GameState.MODE_SELECT:
+        this.updateModeSelect();
+        break;
       case GameState.PLAYING:
         this.updatePlaying(deltaTime);
         break;
@@ -139,6 +145,36 @@ export class Game {
    */
   updateMenu() {
     if (this.input.isFireJustPressed()) {
+      // Transition to mode select screen
+      this.state = GameState.MODE_SELECT;
+      this.selectedModeIndex = 0; // Default to classic
+    }
+  }
+
+  /**
+   * Update mode select state
+   */
+  updateModeSelect() {
+    // Handle up/down for mode selection
+    if (this.input.isUpJustPressed()) {
+      this.selectedModeIndex = 0; // CLASSIC
+      this.soundManager.playShoot();
+    }
+    if (this.input.isDownJustPressed()) {
+      this.selectedModeIndex = 1; // ENDLESS
+      this.soundManager.playShoot();
+    }
+
+    // Handle confirm (Enter/Space/A)
+    if (this.input.isConfirmJustPressed() || this.input.isFireJustPressed()) {
+      // Set game mode based on selection
+      this.gameMode = this.selectedModeIndex === 0 ? GameMode.CLASSIC : GameMode.ENDLESS;
+
+      // Update managers with game mode
+      this.scoreManager.setGameMode(this.gameMode);
+      this.enemyManager.setGameMode(this.gameMode);
+
+      // Start the game
       this.startNewGame();
     }
   }
@@ -224,7 +260,11 @@ export class Game {
     this.levelTransitionTimer += deltaTime;
 
     if (this.levelTransitionTimer >= this.levelTransitionDuration) {
-      this.startNextLevel();
+      if (this.gameMode === GameMode.ENDLESS) {
+        this.startNextWave();
+      } else {
+        this.startNextLevel();
+      }
     }
   }
 
@@ -445,12 +485,17 @@ export class Game {
    */
   startNewGame() {
     this.level = 1;
+    this.wave = 1;
     this.scoreManager.reset();
     this.projectileManager.clear();
     this.explosions = [];
     this.mysteryShip = null;
     this.mysteryShipTimer = 0;
     this.newHighScoreRank = 0;
+
+    // Set wave in managers for endless mode
+    this.enemyManager.setWave(1);
+    this.scoreManager.setWave(1);
 
     this.player = new Player();
     this.createBunkers();
@@ -461,7 +506,7 @@ export class Game {
   }
 
   /**
-   * Start the next level
+   * Start the next level (classic mode)
    */
   startNextLevel() {
     this.level++;
@@ -473,6 +518,30 @@ export class Game {
 
     // Recreate bunkers only every 3 levels
     if (this.level % 3 === 1) {
+      this.createBunkers();
+    }
+
+    this.enemyManager.createFormation();
+    this.state = GameState.PLAYING;
+  }
+
+  /**
+   * Start the next wave (endless mode)
+   */
+  startNextWave() {
+    this.wave++;
+    this.projectileManager.clear();
+    this.explosions = [];
+    this.mysteryShip = null;
+    this.mysteryShipTimer = 0;
+    this.levelTransitionTimer = 0;
+
+    // Update wave in managers
+    this.enemyManager.setWave(this.wave);
+    this.scoreManager.setWave(this.wave);
+
+    // Recreate bunkers every 5 waves in endless mode
+    if (this.wave % 5 === 1) {
       this.createBunkers();
     }
 
@@ -493,8 +562,12 @@ export class Game {
    * Handle game over
    */
   gameOver() {
-    // Update level in score manager for high score tracking
-    this.scoreManager.setLevel(this.level);
+    // Update level/wave in score manager for high score tracking
+    if (this.gameMode === GameMode.ENDLESS) {
+      this.scoreManager.setWave(this.wave);
+    } else {
+      this.scoreManager.setLevel(this.level);
+    }
 
     // Check if player achieved a high score
     if (this.scoreManager.isHighScore()) {
@@ -539,7 +612,20 @@ export class Game {
    * @returns {number} Time in ms
    */
   getNextMysteryShipTime() {
-    return randomInt(MYSTERY_SHIP.MIN_INTERVAL, MYSTERY_SHIP.MAX_INTERVAL);
+    let minInterval = MYSTERY_SHIP.MIN_INTERVAL;
+    let maxInterval = MYSTERY_SHIP.MAX_INTERVAL;
+
+    // In endless mode, decrease interval based on wave
+    if (this.gameMode === GameMode.ENDLESS) {
+      const intervalMultiplier = Math.max(
+        1 - (this.wave - 1) * ENDLESS_MODE.MYSTERY_SHIP_INTERVAL_DECREASE,
+        ENDLESS_MODE.MIN_MYSTERY_SHIP_INTERVAL / MYSTERY_SHIP.MIN_INTERVAL
+      );
+      minInterval = Math.max(ENDLESS_MODE.MIN_MYSTERY_SHIP_INTERVAL, minInterval * intervalMultiplier);
+      maxInterval = Math.max(ENDLESS_MODE.MIN_MYSTERY_SHIP_INTERVAL + 2000, maxInterval * intervalMultiplier);
+    }
+
+    return randomInt(minInterval, maxInterval);
   }
 
   /**
@@ -565,7 +651,14 @@ export class Game {
         // Draw starfield background, then start screen with high scores
         this.renderer.clear();
         this.starfield.draw(ctx);
-        this.renderer.drawStartScreenWithScores(controllerStatus, highScores);
+        this.renderer.drawStartScreenWithScores(controllerStatus, highScores, this.gameMode);
+        break;
+
+      case GameState.MODE_SELECT:
+        // Draw starfield background, then mode select screen
+        this.renderer.clear();
+        this.starfield.draw(ctx);
+        this.renderer.drawModeSelectScreen(controllerStatus, this.selectedModeIndex);
         break;
 
       case GameState.PLAYING:
@@ -576,7 +669,12 @@ export class Game {
         if (this.state === GameState.PAUSED) {
           this.renderer.drawPause(hasController);
         } else if (this.state === GameState.LEVEL_COMPLETE) {
-          this.renderer.drawLevelComplete(this.level);
+          if (this.gameMode === GameMode.ENDLESS) {
+            const speedMultiplier = this.enemyManager.getDifficultyMultiplier();
+            this.renderer.drawWaveComplete(this.wave, speedMultiplier);
+          } else {
+            this.renderer.drawLevelComplete(this.level);
+          }
         }
         break;
 
@@ -638,14 +736,24 @@ export class Game {
       this.renderer.drawExplosion(exp.x, exp.y, exp.frame);
     }
 
-    // Draw HUD with controller status
+    // Draw HUD with controller status (different for classic vs endless mode)
     const controllerStatus = this.input.getControllerStatus();
-    this.renderer.drawHUD(
-      this.scoreManager.getScore(),
-      this.scoreManager.getHighScore(),
-      this.player.lives,
-      this.level,
-      controllerStatus
-    );
+    if (this.gameMode === GameMode.ENDLESS) {
+      this.renderer.drawHUDEndless(
+        this.scoreManager.getScore(),
+        this.scoreManager.getHighScore(),
+        this.player.lives,
+        this.wave,
+        controllerStatus
+      );
+    } else {
+      this.renderer.drawHUD(
+        this.scoreManager.getScore(),
+        this.scoreManager.getHighScore(),
+        this.player.lives,
+        this.level,
+        controllerStatus
+      );
+    }
   }
 }

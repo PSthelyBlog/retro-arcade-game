@@ -5,7 +5,8 @@ import { SCORE } from '../constants.js';
  * @typedef {Object} HighScoreEntry
  * @property {string} initials - 3-character player initials
  * @property {number} score - Player's score
- * @property {number} level - Level reached
+ * @property {number} level - Level reached (classic mode)
+ * @property {number} wave - Wave reached (endless mode)
  * @property {number} timestamp - Date recorded (ms since epoch)
  */
 
@@ -22,10 +23,20 @@ export class ScoreManager {
     this.score = 0;
     this.level = 1;
     this.extraLivesAwarded = 0;
+    this.gameMode = 'classic';
+    this.wave = 1;
 
     // Load high scores (array of entries) and legacy high score
     this.highScores = this.loadHighScores();
     this.highScore = this.getTopScore();
+  }
+
+  /**
+   * Get the storage key based on current game mode
+   * @returns {string}
+   */
+  getStorageKey() {
+    return this.gameMode === 'endless' ? 'retroArcadeEndlessHighScores' : 'retroArcadeHighScores';
   }
 
   /**
@@ -34,7 +45,8 @@ export class ScoreManager {
    */
   loadHighScores() {
     try {
-      const saved = localStorage.getItem('retroArcadeHighScores');
+      const storageKey = this.getStorageKey();
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         const scores = JSON.parse(saved);
         if (Array.isArray(scores)) {
@@ -42,17 +54,19 @@ export class ScoreManager {
         }
       }
 
-      // Check for legacy single high score and migrate
-      const legacyScore = localStorage.getItem('retroArcadeHighScore');
-      if (legacyScore) {
-        const score = parseInt(legacyScore, 10);
-        if (score > 0) {
-          return [{
-            initials: '???',
-            score,
-            level: 1,
-            timestamp: Date.now(),
-          }];
+      // For classic mode, check for legacy single high score and migrate
+      if (this.gameMode === 'classic') {
+        const legacyScore = localStorage.getItem('retroArcadeHighScore');
+        if (legacyScore) {
+          const score = parseInt(legacyScore, 10);
+          if (score > 0) {
+            return [{
+              initials: '???',
+              score,
+              level: 1,
+              timestamp: Date.now(),
+            }];
+          }
         }
       }
 
@@ -67,9 +81,10 @@ export class ScoreManager {
    */
   saveHighScores() {
     try {
-      localStorage.setItem('retroArcadeHighScores', JSON.stringify(this.highScores));
-      // Also save legacy format for backwards compatibility
-      if (this.highScores.length > 0) {
+      const storageKey = this.getStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(this.highScores));
+      // Also save legacy format for backwards compatibility (classic mode only)
+      if (this.gameMode === 'classic' && this.highScores.length > 0) {
         localStorage.setItem('retroArcadeHighScore', this.highScores[0].score.toString());
       }
     } catch (e) {
@@ -156,6 +171,43 @@ export class ScoreManager {
   }
 
   /**
+   * Set game mode and reload high scores
+   * @param {string} mode - 'classic' or 'endless'
+   */
+  setGameMode(mode) {
+    if (this.gameMode !== mode) {
+      this.gameMode = mode;
+      // Reload high scores for the new mode
+      this.highScores = this.loadHighScores();
+      this.highScore = this.getTopScore();
+    }
+  }
+
+  /**
+   * Get current game mode
+   * @returns {string}
+   */
+  getGameMode() {
+    return this.gameMode;
+  }
+
+  /**
+   * Set current wave for endless mode
+   * @param {number} wave
+   */
+  setWave(wave) {
+    this.wave = wave;
+  }
+
+  /**
+   * Get current wave
+   * @returns {number}
+   */
+  getWave() {
+    return this.wave;
+  }
+
+  /**
    * Check if current score qualifies for high score board
    * @returns {boolean}
    */
@@ -198,9 +250,15 @@ export class ScoreManager {
     const entry = {
       initials: initials.toUpperCase().substring(0, 3),
       score: this.score,
-      level: this.level,
       timestamp: Date.now(),
     };
+
+    // Include level for classic mode, wave for endless mode
+    if (this.gameMode === 'endless') {
+      entry.wave = this.wave;
+    } else {
+      entry.level = this.level;
+    }
 
     // Find insertion point
     let insertIndex = this.highScores.length;
@@ -246,6 +304,7 @@ export class ScoreManager {
   reset() {
     this.score = 0;
     this.level = 1;
+    this.wave = 1;
     this.extraLivesAwarded = 0;
   }
 
@@ -268,6 +327,7 @@ export class ScoreManager {
     try {
       localStorage.removeItem('retroArcadeHighScores');
       localStorage.removeItem('retroArcadeHighScore');
+      localStorage.removeItem('retroArcadeEndlessHighScores');
     } catch (e) {
       // localStorage not available
     }
