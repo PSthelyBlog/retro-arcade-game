@@ -11,20 +11,31 @@ export class ProjectileManager {
   }
 
   /**
-   * Add player projectile
-   * @param {Object} data - {x, y, isPlayerBullet}
-   * @returns {boolean} True if projectile was added
+   * Add player projectile(s)
+   * @param {Object|Object[]} data - Single projectile {x, y, isPlayerBullet, angle} or array of projectiles
+   * @returns {boolean} True if projectile(s) were added
    */
   addPlayerProjectile(data) {
+    // Handle array of projectiles (multi-shot)
+    const projectiles = Array.isArray(data) ? data : [data];
+
     // Limit player projectiles on screen
     const active = this.playerProjectiles.filter((p) => p.active);
     if (active.length >= this.maxPlayerProjectiles) {
       return false;
     }
 
-    this.playerProjectiles.push(
-      new Projectile(data.x, data.y, true)
-    );
+    for (const projData of projectiles) {
+      const projectile = new Projectile(projData.x, projData.y, true);
+
+      // Apply angle for spread shots
+      if (projData.angle && projData.angle !== 0) {
+        projectile.velocityX = Math.sin(projData.angle) * Math.abs(projectile.velocityY);
+        projectile.velocityY = -Math.cos(projData.angle) * Math.abs(projectile.velocityY);
+      }
+
+      this.playerProjectiles.push(projectile);
+    }
     return true;
   }
 

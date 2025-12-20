@@ -147,4 +147,26 @@ export class CollisionDetector {
 
     return false;
   }
+
+  /**
+   * Check power-ups against player (for collection)
+   * @param {PowerUp[]} powerUps - Active power-ups
+   * @param {Player} player - Player object
+   * @returns {PowerUp[]} Array of power-ups that were collected
+   */
+  static checkPowerUpsVsPlayer(powerUps, player) {
+    const collected = [];
+
+    if (!player.active) return collected;
+
+    for (const powerUp of powerUps) {
+      if (!powerUp.active) continue;
+
+      if (this.checkCollision(powerUp, player)) {
+        collected.push(powerUp);
+      }
+    }
+
+    return collected;
+  }
 }

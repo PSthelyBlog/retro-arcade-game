@@ -61,15 +61,16 @@ describe('Player', () => {
 
   describe('shooting', () => {
     it('should create projectile data when shooting', () => {
-      const projectile = player.shoot(PLAYER.FIRE_RATE + 1);
-      expect(projectile).not.toBeNull();
-      expect(projectile.isPlayerBullet).toBe(true);
+      const projectiles = player.shoot(PLAYER.FIRE_RATE + 1);
+      expect(projectiles).not.toBeNull();
+      expect(Array.isArray(projectiles)).toBe(true);
+      expect(projectiles[0].isPlayerBullet).toBe(true);
     });
 
     it('should position projectile at center top of player', () => {
-      const projectile = player.shoot(PLAYER.FIRE_RATE + 1);
-      expect(projectile.x).toBe(player.x + player.width / 2 - 2);
-      expect(projectile.y).toBe(player.y - 10);
+      const projectiles = player.shoot(PLAYER.FIRE_RATE + 1);
+      expect(projectiles[0].x).toBe(player.x + player.width / 2 - 2);
+      expect(projectiles[0].y).toBe(player.y - 10);
     });
 
     it('should respect fire rate cooldown', () => {
@@ -81,6 +82,20 @@ describe('Player', () => {
     it('should allow shooting after cooldown', () => {
       player.shoot(0);
       const secondShot = player.shoot(PLAYER.FIRE_RATE + 1);
+      expect(secondShot).not.toBeNull();
+    });
+
+    it('should fire multiple projectiles with multi-shot enabled', () => {
+      player.setMultiShotConfig({ projectileCount: 3, spreadAngle: 15 });
+      const projectiles = player.shoot(PLAYER.FIRE_RATE + 1);
+      expect(projectiles.length).toBe(3);
+    });
+
+    it('should respect fire rate multiplier', () => {
+      player.setFireRateMultiplier(0.5); // Faster fire rate
+      player.shoot(0);
+      // With 0.5 multiplier, cooldown is half
+      const secondShot = player.shoot(PLAYER.FIRE_RATE * 0.5 + 1);
       expect(secondShot).not.toBeNull();
     });
   });
@@ -97,16 +112,18 @@ describe('Player', () => {
       expect(player.invulnerable).toBe(true);
     });
 
-    it('should return true when no lives remaining', () => {
+    it('should return died=true when no lives remaining', () => {
       player.lives = 1;
-      const isDead = player.hit();
-      expect(isDead).toBe(true);
+      const result = player.hit();
+      expect(result.died).toBe(true);
+      expect(result.shieldConsumed).toBe(false);
     });
 
-    it('should return false when lives remaining', () => {
+    it('should return died=false when lives remaining', () => {
       player.lives = 3;
-      const isDead = player.hit();
-      expect(isDead).toBe(false);
+      const result = player.hit();
+      expect(result.died).toBe(false);
+      expect(result.shieldConsumed).toBe(false);
     });
 
     it('should not take damage while invulnerable', () => {
@@ -114,6 +131,16 @@ describe('Player', () => {
       const initialLives = player.lives;
       player.hit();
       expect(player.lives).toBe(initialLives);
+    });
+
+    it('should consume shield instead of losing life', () => {
+      player.setShield(true);
+      const initialLives = player.lives;
+      const result = player.hit();
+      expect(result.died).toBe(false);
+      expect(result.shieldConsumed).toBe(true);
+      expect(player.lives).toBe(initialLives); // Lives unchanged
+      expect(player.hasShield()).toBe(false); // Shield consumed
     });
   });
 

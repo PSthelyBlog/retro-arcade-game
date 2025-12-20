@@ -1,4 +1,4 @@
-import { GAME, GameState, GameMode, BUNKER, MYSTERY_SHIP, ENDLESS_MODE } from './constants.js';
+import { GAME, GameState, GameMode, BUNKER, MYSTERY_SHIP, ENDLESS_MODE, POWERUPS } from './constants.js';
 import { CanvasRenderer } from './renderer/canvas-renderer.js';
 import { Starfield } from './renderer/starfield.js';
 import { InputHandler } from './managers/input-handler.js';
@@ -7,6 +7,7 @@ import { ProjectileManager } from './managers/projectile-manager.js';
 import { CollisionDetector } from './managers/collision-detector.js';
 import { ScoreManager } from './managers/score-manager.js';
 import { NameEntryManager } from './managers/name-entry-manager.js';
+import { PowerUpManager } from './managers/power-up-manager.js';
 import { SoundManager } from './audio/sound-manager.js';
 import { Player } from './entities/player.js';
 import { Bunker } from './entities/bunker.js';
@@ -26,6 +27,7 @@ export class Game {
     this.projectileManager = new ProjectileManager();
     this.scoreManager = new ScoreManager();
     this.nameEntryManager = new NameEntryManager();
+    this.powerUpManager = new PowerUpManager();
     this.soundManager = new SoundManager();
 
     // Game state
@@ -198,9 +200,9 @@ export class Game {
       this.player.moveRight();
     }
     if (this.input.isFireHeld()) {
-      const shot = this.player.shoot(this.lastTime);
-      if (shot) {
-        if (this.projectileManager.addPlayerProjectile(shot)) {
+      const shots = this.player.shoot(this.lastTime);
+      if (shots) {
+        if (this.projectileManager.addPlayerProjectile(shots)) {
           this.soundManager.playShoot();
           // Light haptic feedback on shoot
           this.input.vibrate(0.15, 50);
@@ -221,6 +223,10 @@ export class Game {
     // Update projectiles
     this.projectileManager.update(deltaTime);
 
+    // Update power-ups
+    this.powerUpManager.update(deltaTime, this.lastTime);
+    this.syncPowerUpEffects();
+
     // Update mystery ship
     this.updateMysteryShip(deltaTime);
 
@@ -232,6 +238,22 @@ export class Game {
 
     // Check win/lose conditions
     this.checkGameConditions();
+  }
+
+  /**
+   * Sync power-up effects from manager to player
+   */
+  syncPowerUpEffects() {
+    // Sync fire rate multiplier
+    this.player.setFireRateMultiplier(this.powerUpManager.getFireRateMultiplier());
+
+    // Sync multi-shot config
+    this.player.setMultiShotConfig(this.powerUpManager.getMultiShotConfig());
+
+    // Sync shield (only set if manager has it, player doesn't lose it from manager)
+    if (this.powerUpManager.hasShield() && !this.player.hasShield()) {
+      this.player.setShield(true);
+    }
   }
 
   /**
@@ -372,6 +394,7 @@ export class Game {
     const playerProjectiles = this.projectileManager.getActivePlayerProjectiles();
     const enemyProjectiles = this.projectileManager.getActiveEnemyProjectiles();
     const enemies = this.enemyManager.getActiveEnemies();
+    const powerUps = this.powerUpManager.getActivePowerUps();
 
     // Player projectiles vs enemies
     const enemyHits = CollisionDetector.checkPlayerProjectilesVsEnemies(
@@ -381,8 +404,15 @@ export class Game {
     for (const { projectile, enemy } of enemyHits) {
       projectile.deactivate();
       const points = this.enemyManager.removeEnemy(enemy);
-      this.addExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+      const enemyCenterX = enemy.x + enemy.width / 2;
+      const enemyCenterY = enemy.y + enemy.height / 2;
+      this.addExplosion(enemyCenterX, enemyCenterY);
       this.soundManager.playExplosion();
+
+      // Try to spawn a power-up at enemy location
+      if (this.powerUpManager.trySpawn(enemyCenterX, enemyCenterY)) {
+        this.soundManager.playPowerUpSpawn();
+      }
 
       const earnedExtraLife = this.scoreManager.addPoints(points);
       if (earnedExtraLife) {
@@ -400,14 +430,30 @@ export class Game {
       if (mysteryHit) {
         mysteryHit.projectile.deactivate();
         const points = this.mysteryShip.getPoints();
-        this.addExplosion(
-          this.mysteryShip.x + this.mysteryShip.width / 2,
-          this.mysteryShip.y + this.mysteryShip.height / 2
-        );
+        const shipCenterX = this.mysteryShip.x + this.mysteryShip.width / 2;
+        const shipCenterY = this.mysteryShip.y + this.mysteryShip.height / 2;
+        this.addExplosion(shipCenterX, shipCenterY);
         this.soundManager.playExplosion();
         this.scoreManager.addPoints(points);
+
+        // Mystery ships have higher power-up drop chance
+        if (Math.random() < 0.5) {
+          this.powerUpManager.trySpawn(shipCenterX, shipCenterY);
+          this.soundManager.playPowerUpSpawn();
+        }
+
         this.mysteryShip = null;
       }
+    }
+
+    // Power-ups vs player
+    const collectedPowerUps = CollisionDetector.checkPowerUpsVsPlayer(
+      powerUps,
+      this.player
+    );
+    for (const powerUp of collectedPowerUps) {
+      powerUp.deactivate();
+      this.handlePowerUpCollection(powerUp);
     }
 
     // Enemy projectiles vs player
@@ -417,15 +463,24 @@ export class Game {
     );
     if (playerHit) {
       playerHit.deactivate();
-      const isDead = this.player.hit();
-      this.soundManager.playPlayerHit();
-      this.renderer.shake(10, 300);
+      const hitResult = this.player.hit();
 
-      // Haptic feedback on hit (strong vibration)
-      this.input.vibrate(0.8, 300);
-
-      if (isDead) {
+      if (hitResult.shieldConsumed) {
+        // Shield absorbed the hit
+        this.soundManager.playShieldBreak();
+        this.powerUpManager.consumeShield();
+        this.renderer.shake(5, 150);
+        this.input.vibrate(0.3, 150);
+      } else if (hitResult.died) {
+        this.soundManager.playPlayerHit();
+        this.renderer.shake(10, 300);
+        this.input.vibrate(0.8, 300);
         this.gameOver();
+      } else {
+        // Hit but not dead (lost a life)
+        this.soundManager.playPlayerHit();
+        this.renderer.shake(10, 300);
+        this.input.vibrate(0.8, 300);
       }
     }
 
@@ -451,6 +506,40 @@ export class Game {
         Math.floor(bunker.rows / 2),
         3
       );
+    }
+  }
+
+  /**
+   * Handle power-up collection
+   * @param {PowerUp} powerUp - The collected power-up
+   */
+  handlePowerUpCollection(powerUp) {
+    const result = this.powerUpManager.activateEffect(powerUp.type, this.lastTime);
+    this.soundManager.playPowerUp();
+
+    switch (powerUp.type) {
+      case 'SHIELD':
+        this.player.setShield(true);
+        this.soundManager.playShieldActivate();
+        break;
+
+      case 'BOMB':
+        // Clear all enemies (no points for bomb kills)
+        const enemies = this.enemyManager.getActiveEnemies();
+        for (const enemy of enemies) {
+          this.addExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+          enemy.deactivate();
+        }
+        this.soundManager.playBombExplosion();
+        this.renderer.shake(15, 500);
+        this.input.vibrate(1.0, 500);
+        break;
+
+      case 'EXTRA_LIFE':
+        this.player.lives++;
+        break;
+
+      // RAPID_FIRE and MULTI_SHOT are handled by syncPowerUpEffects
     }
   }
 
@@ -488,6 +577,7 @@ export class Game {
     this.wave = 1;
     this.scoreManager.reset();
     this.projectileManager.clear();
+    this.powerUpManager.reset();
     this.explosions = [];
     this.mysteryShip = null;
     this.mysteryShipTimer = 0;
@@ -511,6 +601,7 @@ export class Game {
   startNextLevel() {
     this.level++;
     this.projectileManager.clear();
+    this.powerUpManager.clearPowerUps(); // Clear uncollected power-ups (keep active effects)
     this.explosions = [];
     this.mysteryShip = null;
     this.mysteryShipTimer = 0;
@@ -531,6 +622,7 @@ export class Game {
   startNextWave() {
     this.wave++;
     this.projectileManager.clear();
+    this.powerUpManager.clearPowerUps(); // Clear uncollected power-ups (keep active effects)
     this.explosions = [];
     this.mysteryShip = null;
     this.mysteryShipTimer = 0;
@@ -725,6 +817,9 @@ export class Game {
       this.mysteryShip.draw(ctx);
     }
 
+    // Draw power-ups
+    this.powerUpManager.draw(ctx);
+
     // Draw player
     this.player.draw(ctx);
 
@@ -755,5 +850,9 @@ export class Game {
         controllerStatus
       );
     }
+
+    // Draw power-up HUD (active effects with countdown timers)
+    const activeEffects = this.powerUpManager.getActiveEffectsStatus(this.lastTime);
+    this.renderer.drawPowerUpHUD(activeEffects);
   }
 }

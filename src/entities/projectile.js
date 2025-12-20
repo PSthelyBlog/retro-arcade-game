@@ -14,6 +14,7 @@ export class Projectile extends Entity {
   constructor(x, y, isPlayerBullet = true) {
     super(x, y, PROJECTILE.WIDTH, PROJECTILE.HEIGHT);
     this.isPlayerBullet = isPlayerBullet;
+    this.velocityX = 0; // Horizontal velocity (for spread shots)
     this.velocityY = isPlayerBullet ? -PROJECTILE.PLAYER_SPEED : PROJECTILE.ENEMY_SPEED;
     this.color = isPlayerBullet ? PROJECTILE.PLAYER_COLOR : PROJECTILE.ENEMY_COLOR;
   }
@@ -23,10 +24,13 @@ export class Projectile extends Entity {
    * @param {number} deltaTime - Time since last update
    */
   update(deltaTime) {
-    this.y += this.velocityY * (deltaTime / 16.67);
+    const timeFactor = deltaTime / 16.67;
+    this.x += this.velocityX * timeFactor;
+    this.y += this.velocityY * timeFactor;
 
     // Deactivate if off screen
-    if (this.y < -this.height || this.y > GAME.HEIGHT) {
+    if (this.y < -this.height || this.y > GAME.HEIGHT ||
+        this.x < -this.width || this.x > GAME.WIDTH) {
       this.deactivate();
     }
   }

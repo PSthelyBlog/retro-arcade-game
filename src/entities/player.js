@@ -20,6 +20,11 @@ export class Player extends Entity {
     this.invulnerableDuration = 2000; // 2 seconds of invulnerability
     this.blinkRate = 100; // ms
     this.visible = true;
+
+    // Power-up state
+    this.shieldActive = false;
+    this.fireRateMultiplier = 1.0;
+    this.multiShotConfig = null;
   }
 
   /**
@@ -39,33 +44,68 @@ export class Player extends Entity {
   /**
    * Attempt to fire a projectile
    * @param {number} currentTime - Current game time
-   * @returns {Object|null} Projectile data or null if on cooldown
+   * @returns {Object[]|null} Array of projectile data or null if on cooldown
    */
   shoot(currentTime) {
-    if (currentTime - this.lastFireTime >= PLAYER.FIRE_RATE) {
+    const effectiveFireRate = PLAYER.FIRE_RATE * this.fireRateMultiplier;
+
+    if (currentTime - this.lastFireTime >= effectiveFireRate) {
       this.lastFireTime = currentTime;
-      return {
-        x: this.x + this.width / 2 - 2,
-        y: this.y - 10,
+
+      const baseX = this.x + this.width / 2 - 2;
+      const baseY = this.y - 10;
+
+      // Multi-shot: fire spread pattern
+      if (this.multiShotConfig) {
+        const { projectileCount, spreadAngle } = this.multiShotConfig;
+        const projectiles = [];
+        const angleStep = (spreadAngle * Math.PI / 180);
+        const startAngle = -((projectileCount - 1) / 2) * angleStep;
+
+        for (let i = 0; i < projectileCount; i++) {
+          const angle = startAngle + i * angleStep;
+          projectiles.push({
+            x: baseX,
+            y: baseY,
+            isPlayerBullet: true,
+            angle: angle, // Will be used by ProjectileManager
+          });
+        }
+        return projectiles;
+      }
+
+      // Normal single shot
+      return [{
+        x: baseX,
+        y: baseY,
         isPlayerBullet: true,
-      };
+        angle: 0,
+      }];
     }
     return null;
   }
 
   /**
    * Handle player being hit
-   * @returns {boolean} True if player died (no lives left)
+   * @returns {Object} {died: boolean, shieldConsumed: boolean}
    */
   hit() {
-    if (this.invulnerable) return false;
+    // Shield absorbs hit
+    if (this.shieldActive) {
+      this.shieldActive = false;
+      return { died: false, shieldConsumed: true };
+    }
+
+    if (this.invulnerable) {
+      return { died: false, shieldConsumed: false };
+    }
 
     this.lives--;
     if (this.lives > 0) {
       this.setInvulnerable();
-      return false;
+      return { died: false, shieldConsumed: false };
     }
-    return true;
+    return { died: true, shieldConsumed: false };
   }
 
   /**
@@ -74,6 +114,38 @@ export class Player extends Entity {
   setInvulnerable() {
     this.invulnerable = true;
     this.invulnerableTime = 0;
+  }
+
+  /**
+   * Set shield state
+   * @param {boolean} active
+   */
+  setShield(active) {
+    this.shieldActive = active;
+  }
+
+  /**
+   * Set fire rate multiplier (for rapid fire power-up)
+   * @param {number} multiplier - 1.0 = normal, 0.5 = faster
+   */
+  setFireRateMultiplier(multiplier) {
+    this.fireRateMultiplier = multiplier;
+  }
+
+  /**
+   * Set multi-shot configuration
+   * @param {Object|null} config - {projectileCount, spreadAngle} or null
+   */
+  setMultiShotConfig(config) {
+    this.multiShotConfig = config;
+  }
+
+  /**
+   * Check if shield is active
+   * @returns {boolean}
+   */
+  hasShield() {
+    return this.shieldActive;
   }
 
   /**
@@ -86,6 +158,11 @@ export class Player extends Entity {
     this.invulnerable = false;
     this.visible = true;
     this.lastFireTime = 0;
+
+    // Reset power-up state
+    this.shieldActive = false;
+    this.fireRateMultiplier = 1.0;
+    this.multiShotConfig = null;
   }
 
   /**
@@ -112,6 +189,24 @@ export class Player extends Entity {
    */
   draw(ctx) {
     if (!this.visible) return;
+
+    // Draw shield bubble if active
+    if (this.shieldActive) {
+      ctx.save();
+      ctx.strokeStyle = '#00FFFF';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 200) * 0.3;
+      ctx.beginPath();
+      ctx.arc(
+        this.x + this.width / 2,
+        this.y + this.height / 2,
+        Math.max(this.width, this.height) / 2 + 8,
+        0,
+        Math.PI * 2
+      );
+      ctx.stroke();
+      ctx.restore();
+    }
 
     ctx.fillStyle = PLAYER.COLOR;
 

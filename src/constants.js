@@ -137,6 +137,59 @@ export const STARFIELD = {
   BASE_SPEED: 50, // pixels per second at speed 1.0
 };
 
+/**
+ * Power-up configuration
+ * Power-ups drop from enemies and provide temporary/permanent bonuses
+ */
+export const POWERUPS = {
+  FALL_SPEED: 1.5,           // Pixels per frame
+  SIZE: 24,                   // Power-up size in pixels
+  DROP_CHANCE: 0.15,          // 15% chance to drop on enemy kill
+  EXPIRE_TIME: 10000,         // Time before uncollected power-up disappears (ms)
+  PULSE_SPEED: 0.1,           // Animation pulse speed
+
+  TYPES: {
+    SHIELD: {
+      name: 'SHIELD',
+      color: '#00FFFF',        // Cyan
+      dropWeight: 5,           // 5% relative weight
+      duration: Infinity,      // Permanent until hit
+      description: 'Absorbs one hit',
+    },
+    RAPID_FIRE: {
+      name: 'RAPID_FIRE',
+      color: '#FF6600',        // Orange
+      dropWeight: 10,          // 10% relative weight
+      duration: 10000,         // 10 seconds
+      fireRateMultiplier: 0.5, // 50% reduction in fire cooldown
+      description: 'Faster shooting',
+    },
+    MULTI_SHOT: {
+      name: 'MULTI_SHOT',
+      color: '#FF00FF',        // Magenta
+      dropWeight: 8,           // 8% relative weight
+      duration: 8000,          // 8 seconds
+      projectileCount: 3,      // Number of projectiles
+      spreadAngle: 15,         // Degrees between projectiles
+      description: 'Triple spread shot',
+    },
+    BOMB: {
+      name: 'BOMB',
+      color: '#FFFF00',        // Yellow
+      dropWeight: 2,           // 2% relative weight
+      duration: 0,             // Instant effect
+      description: 'Clear all enemies',
+    },
+    EXTRA_LIFE: {
+      name: 'EXTRA_LIFE',
+      color: '#00FF00',        // Green
+      dropWeight: 1,           // 1% relative weight
+      duration: 0,             // Instant effect
+      description: '+1 Life',
+    },
+  },
+};
+
 export const Keys = {
   LEFT: ['ArrowLeft', 'KeyA'],
   RIGHT: ['ArrowRight', 'KeyD'],
