@@ -20,12 +20,20 @@ npm run dev
 
 ## ✨ Features
 
-- 🕹️ **Classic Gameplay**: Authentic Space Invaders mechanics
+### Gameplay
+- 🕹️ **Classic Mode**: Authentic Space Invaders mechanics with 5 levels
+- ♾️ **Endless Mode**: Infinite waves with progressive difficulty scaling
+- 🏆 **Leaderboard**: Top 10 high scores with classic 3-letter initials entry
 - 🎮 **Controller Support**: Full gamepad support (Xbox, PlayStation, Nintendo, generic)
+
+### Audio & Visuals
 - 🎨 **Retro Graphics**: Pixel-art style with CRT scanline effect
+- 🌟 **Parallax Starfield**: 3-layer scrolling background with depth effect
 - 🔊 **8-Bit Audio**: Synthesized sound effects using Web Audio API
 - 📳 **Haptic Feedback**: Controller vibration on shoot and hit events
-- 💾 **High Score**: Persistent high score via localStorage
+
+### Technical
+- 💾 **Persistent Storage**: Separate leaderboards for Classic and Endless modes
 - 📱 **Responsive**: Scales to different screen sizes
 - ⚡ **60 FPS**: Smooth gameplay with fixed timestep loop
 
@@ -37,10 +45,14 @@ npm run dev
 |-----|--------|
 | `←` / `A` | Move left |
 | `→` / `D` | Move right |
-| `Space` | Fire |
+| `↑` / `W` | Navigate up (menus, name entry) |
+| `↓` / `S` | Navigate down (menus, name entry) |
+| `Space` / `Enter` | Fire / Confirm |
 | `P` | Pause |
 | `M` | Mute/Unmute |
 | `R` | Restart (game over) |
+
+> **Name Entry**: Type letters directly or use Up/Down arrows to cycle through characters
 
 ### Controller (Gamepad)
 
@@ -48,7 +60,8 @@ npm run dev
 |--------|--------|
 | D-Pad Left / Left Stick | Move left |
 | D-Pad Right / Left Stick | Move right |
-| A / RB / RT | Fire |
+| D-Pad Up/Down | Navigate menus, name entry |
+| A / RB / RT | Fire / Confirm |
 | Start | Pause |
 | Select | Restart (game over) |
 | Y | Mute/Unmute |
@@ -72,6 +85,49 @@ npm run dev
 | Mystery Ship | 50-300 (random) |
 
 **Bonus**: Extra life every 10,000 points!
+
+## 🎲 Game Modes
+
+### Classic Mode
+The original Space Invaders experience with 5 levels of increasing difficulty.
+
+- Complete all waves to finish the game
+- Difficulty increases each level
+- Score saved to Classic Mode leaderboard
+
+### Endless Mode ♾️
+Survive as long as possible against infinite waves!
+
+| Wave | Difficulty Changes |
+|------|-------------------|
+| Every wave | Speed +5% (caps at 3x) |
+| Every wave | Enemy fire rate +3% (caps at 2.5x) |
+| Wave 10+ | "WARNING" indicator |
+| Wave 15+ | "DANGER" indicator |
+
+- No level cap - keeps getting harder!
+- Wave count displayed in HUD
+- Separate leaderboard from Classic Mode
+- Mystery ships spawn more frequently at higher waves
+
+### High Score Entry
+When you achieve a top 10 score, enter your initials arcade-style:
+
+```
+═══════════════════════════
+   N E W   H I G H   S C O R E
+        12,500 PTS
+
+        [ A ] [ A ] [ A ]
+              ▲
+    ↑/↓ CHANGE   ←/→ MOVE
+       ENTER TO CONFIRM
+═══════════════════════════
+```
+
+- 3 characters (A-Z, 0-9, space)
+- Use arrow keys or type directly
+- Top 5 scores shown on title screen
 
 ## 🏗️ Project Structure
 
@@ -264,13 +320,17 @@ export const ENEMY = {
 
 The following features are planned for future updates, organized by priority and complexity.
 
-### Phase 1: Quick Wins (1-2 hours each)
+### ✅ Phase 1: Quick Wins — COMPLETE
 
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| **Name Entry** | High | Classic arcade-style initials entry for high scores |
-| **Background Starfield** | Low | Parallax scrolling stars for visual polish |
-| **Endless Mode** | High | Continuous waves with increasing difficulty |
+All Phase 1 features have been implemented!
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Name Entry** | ✅ Done | Classic arcade-style 3-letter initials entry for high scores |
+| **Background Starfield** | ✅ Done | 3-layer parallax scrolling stars with depth effect |
+| **Endless Mode** | ✅ Done | Infinite waves with +5% speed and +3% fire rate per wave |
+
+See [Game Modes](#-game-modes) for details on how to use these features.
 
 ### Phase 2: Gameplay Enhancements (3-4 hours each)
 

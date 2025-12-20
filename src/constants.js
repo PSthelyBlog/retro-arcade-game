@@ -30,7 +30,7 @@ export const ENEMY = {
   VERTICAL_SPACING: 40,
   BASE_SPEED: 1,
   SPEED_INCREMENT: 0.1, // Speed increase per enemy killed
-  DROP_DISTANCE: 20,
+  DROP_DISTANCE: 8,
   FIRE_CHANCE: 0.001, // Per enemy per frame
   START_X: 100,
   START_Y: 80,
