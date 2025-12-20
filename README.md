@@ -35,7 +35,7 @@ npm run dev
 
 ### Technical
 - 💾 **Persistent Storage**: Separate leaderboards for Classic and Endless modes
-- 📱 **Responsive**: Scales to different screen sizes
+- 📱 **Mobile Support**: On-screen touch controls for phones and tablets
 - ⚡ **60 FPS**: Smooth gameplay with fixed timestep loop
 
 ## 🎯 Controls
@@ -75,6 +75,29 @@ npm run dev
 - Generic USB/Bluetooth gamepads
 
 > **Note**: Controller status is shown on the title screen and in-game (icon in bottom-right corner when connected)
+
+### Touch (Mobile) 📱
+
+On-screen virtual buttons appear automatically on touch-enabled devices:
+
+| Button | Location | Action |
+|--------|----------|--------|
+| ◀ LEFT | Bottom-left | Move left |
+| ▶ RIGHT | Bottom-left (right of LEFT) | Move right |
+| 🔫 FIRE | Bottom-right | Fire (hold for auto-fire) |
+| ⏸ PAUSE | Top-right | Pause game |
+
+**Features:**
+- Buttons appear automatically on touch devices
+- Multi-touch support (move + fire simultaneously)
+- Haptic feedback on button press
+- Buttons highlight when pressed
+- Works in portrait and landscape orientation
+
+**Tips:**
+- Use your thumbs: left for movement, right for firing
+- Hold the fire button for continuous shooting
+- Buttons have extra hit padding for easier tapping
 
 ## 📊 Scoring
 
@@ -159,6 +182,7 @@ retro-arcade-game/
 │   ├── entity.md
 │   ├── audio.md
 │   ├── controller.md            # Gamepad support
+│   ├── touch-controls.md        # Mobile touch controls
 │   ├── test-writer.md
 │   └── docs-writer.md
 ├── src/
@@ -356,10 +380,12 @@ See [Game Modes](#-game-modes) for details on how to use these features.
 | Feature | Status | Description |
 |---------|--------|-------------|
 | **Power-ups System** | ✅ Done | Shield, rapid fire, multi-shot, bomb, extra life - dropped by enemies |
-| **Touch Controls** | ⬜ Todo | On-screen virtual buttons for mobile play |
+| **Touch Controls** | ✅ Done | On-screen virtual buttons for mobile play with haptic feedback |
 | **Background Music** | ⬜ Todo | Looping chiptune background track |
 | **Combo System** | ⬜ Todo | Bonus points for destroying enemies in quick succession |
 | **Wave/Formation Patterns** | ⬜ Todo | Different enemy formations per level (V-shape, diamond, spiral) |
+
+See [Touch (Mobile)](#touch-mobile-) controls for details on how to use touch controls.
 
 ### Phase 3: Visual & Audio Polish (4+ hours each)
 

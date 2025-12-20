@@ -254,3 +254,51 @@ export const ControllerConfig = {
   VIBRATION_INTENSITY: 0.3, // Haptic feedback intensity (0-1)
 };
 
+/**
+ * Touch control configuration for mobile devices
+ * Virtual on-screen buttons for touch screens
+ */
+export const TOUCH_CONTROLS = {
+  ENABLED: true,                    // Enable touch controls
+  BUTTON_SIZE: 80,                  // Base button size in pixels
+  BUTTON_OPACITY: 0.6,              // Default opacity
+  BUTTON_ACTIVE_OPACITY: 0.9,       // Opacity when pressed
+  BUTTON_MARGIN: 20,                // Margin from screen edges
+
+  // Colors
+  BUTTON_COLOR: '#FFFFFF',          // Button outline/fill color
+  BUTTON_ACTIVE_COLOR: '#00FF00',   // Color when pressed
+
+  // Left side directional controls
+  DPAD: {
+    LEFT_OFFSET: 100,               // X offset from left edge
+    BOTTOM_OFFSET: 100,             // Y offset from bottom edge
+    BUTTON_GAP: 10,                 // Gap between left/right buttons
+  },
+
+  // Right side fire button
+  FIRE: {
+    RIGHT_OFFSET: 100,              // X offset from right edge
+    BOTTOM_OFFSET: 100,             // Y offset from bottom edge
+    SIZE: 100,                      // Fire button is larger
+    HOLD_TO_AUTOFIRE: true,         // Enable hold-to-autofire
+  },
+
+  // Top right pause button
+  PAUSE: {
+    TOP_OFFSET: 20,
+    RIGHT_OFFSET: 20,
+    SIZE: 50,
+  },
+
+  // Haptic feedback
+  HAPTIC: {
+    ENABLED: true,
+    PRESS_DURATION: 10,             // Light tap on button press (ms)
+    FIRE_DURATION: 5,               // Very light for firing
+  },
+
+  // Hit detection
+  HIT_PADDING: 20,                  // Extra padding around buttons for easier tapping
+};
+

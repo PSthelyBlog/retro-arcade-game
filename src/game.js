@@ -1,6 +1,7 @@
 import { GAME, GameState, GameMode, BUNKER, MYSTERY_SHIP, ENDLESS_MODE, POWERUPS } from './constants.js';
 import { CanvasRenderer } from './renderer/canvas-renderer.js';
 import { Starfield } from './renderer/starfield.js';
+import { TouchControlsRenderer } from './renderer/touch-controls-renderer.js';
 import { InputHandler } from './managers/input-handler.js';
 import { EnemyManager } from './managers/enemy-manager.js';
 import { ProjectileManager } from './managers/projectile-manager.js';
@@ -22,6 +23,7 @@ export class Game {
     // Core systems
     this.renderer = new CanvasRenderer('gameCanvas');
     this.starfield = new Starfield();
+    this.touchControlsRenderer = new TouchControlsRenderer();
     this.input = new InputHandler();
     this.enemyManager = new EnemyManager();
     this.projectileManager = new ProjectileManager();
@@ -744,6 +746,7 @@ export class Game {
         this.renderer.clear();
         this.starfield.draw(ctx);
         this.renderer.drawStartScreenWithScores(controllerStatus, highScores, this.gameMode);
+        this.drawTouchControls(ctx);
         break;
 
       case GameState.MODE_SELECT:
@@ -751,6 +754,7 @@ export class Game {
         this.renderer.clear();
         this.starfield.draw(ctx);
         this.renderer.drawModeSelectScreen(controllerStatus, this.selectedModeIndex);
+        this.drawTouchControls(ctx);
         break;
 
       case GameState.PLAYING:
@@ -789,7 +793,20 @@ export class Game {
           this.scoreManager.getHighScore(),
           hasController
         );
+        this.drawTouchControls(ctx);
         break;
+    }
+  }
+
+  /**
+   * Draw touch controls overlay (only on touch devices)
+   * @param {CanvasRenderingContext2D} ctx
+   */
+  drawTouchControls(ctx) {
+    if (this.input.isTouchActive()) {
+      const buttonPositions = this.input.getTouchButtonPositions();
+      const buttonStates = this.input.getTouchButtonStates();
+      this.touchControlsRenderer.draw(ctx, buttonPositions, buttonStates);
     }
   }
 
@@ -854,5 +871,8 @@ export class Game {
     // Draw power-up HUD (active effects with countdown timers)
     const activeEffects = this.powerUpManager.getActiveEffectsStatus(this.lastTime);
     this.renderer.drawPowerUpHUD(activeEffects);
+
+    // Draw touch controls overlay (on touch devices)
+    this.drawTouchControls(ctx);
   }
 }
