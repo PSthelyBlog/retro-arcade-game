@@ -1,4 +1,4 @@
-import { GAME, UI, NAME_ENTRY } from '../constants.js';
+import { GAME, UI, NAME_ENTRY, POWERUPS } from '../constants.js';
 import { padNumber } from '../utils/helpers.js';
 
 /**
@@ -920,6 +920,146 @@ export class CanvasRenderer {
     }
 
     this.ctx.textAlign = 'left';
+  }
+
+  /**
+   * Draw active power-up effects in HUD
+   * @param {Object[]} activeEffects - Array of {type, remainingTime, color}
+   */
+  drawPowerUpHUD(activeEffects) {
+    if (!activeEffects || activeEffects.length === 0) return;
+
+    const startX = 20;
+    const startY = GAME.HEIGHT - 60;
+    const iconSize = 40;
+    const spacing = 50;
+
+    for (let i = 0; i < activeEffects.length; i++) {
+      const effect = activeEffects[i];
+      const x = startX + i * spacing;
+      const y = startY;
+
+      // Background
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      this.ctx.fillRect(x - 2, y - 2, iconSize + 4, iconSize + 20);
+
+      // Icon background with effect color
+      this.ctx.fillStyle = effect.color + '40'; // 25% opacity
+      this.ctx.fillRect(x, y, iconSize, iconSize);
+
+      // Draw power-up icon
+      this.drawPowerUpIcon(x + iconSize / 2, y + iconSize / 2, effect.type, effect.color);
+
+      // Timer bar or ∞ for permanent effects
+      if (effect.remainingTime === Infinity) {
+        this.ctx.fillStyle = effect.color;
+        this.ctx.font = `14px ${UI.FONT_FAMILY}`;
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('∞', x + iconSize / 2, y + iconSize + 14);
+        this.ctx.textAlign = 'left';
+      } else {
+        // Timer bar
+        const maxTime = POWERUPS.TYPES[effect.type]?.duration || 10000;
+        const ratio = Math.min(effect.remainingTime / maxTime, 1);
+        const barWidth = iconSize * ratio;
+
+        // Bar background
+        this.ctx.fillStyle = '#333333';
+        this.ctx.fillRect(x, y + iconSize + 4, iconSize, 8);
+
+        // Active bar (blink when low)
+        const isLow = effect.remainingTime < 2000;
+        const blink = isLow && Math.floor(Date.now() / 200) % 2 === 0;
+        this.ctx.fillStyle = blink ? '#FF0000' : effect.color;
+        this.ctx.fillRect(x, y + iconSize + 4, barWidth, 8);
+      }
+    }
+  }
+
+  /**
+   * Draw a power-up icon (simplified version for HUD)
+   * @param {number} cx - Center X
+   * @param {number} cy - Center Y
+   * @param {string} type - Power-up type
+   * @param {string} color - Color
+   */
+  drawPowerUpIcon(cx, cy, type, color) {
+    const size = 14;
+    this.ctx.fillStyle = color;
+
+    switch (type) {
+      case 'SHIELD':
+        // Shield shape
+        this.ctx.beginPath();
+        this.ctx.moveTo(cx, cy - size);
+        this.ctx.lineTo(cx + size * 0.8, cy - size * 0.3);
+        this.ctx.lineTo(cx + size * 0.8, cy + size * 0.3);
+        this.ctx.lineTo(cx, cy + size);
+        this.ctx.lineTo(cx - size * 0.8, cy + size * 0.3);
+        this.ctx.lineTo(cx - size * 0.8, cy - size * 0.3);
+        this.ctx.closePath();
+        this.ctx.fill();
+        break;
+
+      case 'RAPID_FIRE':
+        // Lightning bolt
+        this.ctx.beginPath();
+        this.ctx.moveTo(cx + size * 0.3, cy - size);
+        this.ctx.lineTo(cx - size * 0.2, cy);
+        this.ctx.lineTo(cx + size * 0.2, cy);
+        this.ctx.lineTo(cx - size * 0.3, cy + size);
+        this.ctx.lineTo(cx + size * 0.2, cy);
+        this.ctx.lineTo(cx - size * 0.2, cy);
+        this.ctx.closePath();
+        this.ctx.fill();
+        break;
+
+      case 'MULTI_SHOT':
+        // Three arrows
+        this.ctx.font = `${size * 1.5}px ${UI.FONT_FAMILY}`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('↗', cx, cy);
+        this.ctx.textBaseline = 'alphabetic';
+        this.ctx.textAlign = 'left';
+        break;
+
+      default:
+        // Default circle
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, size * 0.8, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+  }
+
+  /**
+   * Draw shield bubble effect around player position
+   * Note: This is an overlay method for special shield visual
+   * @param {number} x - Player center X
+   * @param {number} y - Player center Y
+   * @param {number} radius - Shield radius
+   */
+  drawShieldBubble(x, y, radius) {
+    const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.5;
+
+    // Outer glow
+    this.ctx.save();
+    this.ctx.strokeStyle = '#00FFFF';
+    this.ctx.lineWidth = 3;
+    this.ctx.globalAlpha = pulse;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+    this.ctx.stroke();
+
+    // Inner glow
+    this.ctx.strokeStyle = '#FFFFFF';
+    this.ctx.lineWidth = 1;
+    this.ctx.globalAlpha = pulse * 0.5;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, radius - 3, 0, Math.PI * 2);
+    this.ctx.stroke();
+
+    this.ctx.restore();
   }
 
   /**

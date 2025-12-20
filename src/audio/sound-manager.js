@@ -239,6 +239,166 @@ export class SoundManager {
   }
 
   /**
+   * Play power-up spawn/drop sound
+   */
+  playPowerUpSpawn() {
+    if (!this.initialized || this.muted) return;
+
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = 'sine';
+    // Quick descending shimmer
+    osc.frequency.setValueAtTime(1200, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, this.audioContext.currentTime + 0.15);
+
+    gain.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.15);
+  }
+
+  /**
+   * Play power-up expire warning sound (beeping)
+   */
+  playPowerUpExpireWarning() {
+    if (!this.initialized || this.muted) return;
+
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, this.audioContext.currentTime);
+
+    // Quick beep pattern
+    gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+    gain.gain.setValueAtTime(0, this.audioContext.currentTime + 0.05);
+    gain.gain.setValueAtTime(0.1, this.audioContext.currentTime + 0.1);
+    gain.gain.setValueAtTime(0, this.audioContext.currentTime + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.15);
+  }
+
+  /**
+   * Play shield activate sound
+   */
+  playShieldActivate() {
+    if (!this.initialized || this.muted) return;
+
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = 'sine';
+    // Ascending "force field" sound
+    osc.frequency.setValueAtTime(300, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, this.audioContext.currentTime + 0.3);
+
+    gain.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+    gain.gain.setValueAtTime(0.2, this.audioContext.currentTime + 0.25);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.35);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.35);
+  }
+
+  /**
+   * Play shield break sound
+   */
+  playShieldBreak() {
+    if (!this.initialized || this.muted) return;
+
+    // Shattering glass effect
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1500, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.25);
+
+    gain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.25);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.25);
+
+    // Add noise for cracking effect
+    const bufferSize = this.audioContext.sampleRate * 0.2;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize) * 0.3;
+    }
+
+    const source = this.audioContext.createBufferSource();
+    const noiseGain = this.audioContext.createGain();
+
+    source.buffer = buffer;
+    noiseGain.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+
+    source.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    source.start();
+  }
+
+  /**
+   * Play bomb explosion sound (bigger than normal explosion)
+   */
+  playBombExplosion() {
+    if (!this.initialized || this.muted) return;
+
+    // Deep rumble
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(20, this.audioContext.currentTime + 0.5);
+
+    gain.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.5);
+
+    // Add heavy noise
+    const bufferSize = this.audioContext.sampleRate * 0.4;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+
+    const source = this.audioContext.createBufferSource();
+    const noiseGain = this.audioContext.createGain();
+
+    source.buffer = buffer;
+    noiseGain.gain.setValueAtTime(0.4, this.audioContext.currentTime);
+
+    source.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    source.start();
+  }
+
+  /**
    * Play game over sound
    */
   playGameOver() {

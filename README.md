@@ -23,6 +23,7 @@ npm run dev
 ### Gameplay
 - 🕹️ **Classic Mode**: Authentic Space Invaders mechanics with 5 levels
 - ♾️ **Endless Mode**: Infinite waves with progressive difficulty scaling
+- ⚡ **Power-ups**: Collect shields, rapid fire, multi-shot, bombs, and extra lives
 - 🏆 **Leaderboard**: Top 10 high scores with classic 3-letter initials entry
 - 🎮 **Controller Support**: Full gamepad support (Xbox, PlayStation, Nintendo, generic)
 
@@ -128,6 +129,24 @@ When you achieve a top 10 score, enter your initials arcade-style:
 - 3 characters (A-Z, 0-9, space)
 - Use arrow keys or type directly
 - Top 5 scores shown on title screen
+
+### Power-ups ⚡
+
+Enemies have a 15% chance to drop power-ups when destroyed. Mystery ships have a 50% drop chance!
+
+| Power-up | Color | Effect | Duration |
+|----------|-------|--------|----------|
+| 🛡️ **Shield** | Cyan | Absorbs one hit | Until hit |
+| ⚡ **Rapid Fire** | Orange | 50% faster shooting | 10 seconds |
+| ↗️ **Multi-Shot** | Magenta | 3-way spread pattern | 8 seconds |
+| 💣 **Bomb** | Yellow | Clears all enemies (no points) | Instant |
+| ❤️ **Extra Life** | Green | +1 life | Instant |
+
+**Visual Indicators:**
+- Active shield appears as a cyan bubble around your ship
+- Power-up timers shown in HUD (bottom of screen)
+- Power-ups blink when about to expire (last 2 seconds)
+- Timed effects stack: collecting another resets the timer
 
 ## 🏗️ Project Structure
 
@@ -332,15 +351,15 @@ All Phase 1 features have been implemented!
 
 See [Game Modes](#-game-modes) for details on how to use these features.
 
-### Phase 2: Gameplay Enhancements (3-4 hours each)
+### Phase 2: Gameplay Enhancements (3-4 hours each) — IN PROGRESS
 
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| **Power-ups System** | High | Collectible power-ups (shields, rapid fire, multi-shot, bomb) dropped by enemies |
-| **Touch Controls** | High | On-screen virtual buttons for mobile play |
-| **Background Music** | High | Looping chiptune background track |
-| **Combo System** | Medium | Bonus points for destroying enemies in quick succession |
-| **Wave/Formation Patterns** | Medium | Different enemy formations per level (V-shape, diamond, spiral) |
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Power-ups System** | ✅ Done | Shield, rapid fire, multi-shot, bomb, extra life - dropped by enemies |
+| **Touch Controls** | ⬜ Todo | On-screen virtual buttons for mobile play |
+| **Background Music** | ⬜ Todo | Looping chiptune background track |
+| **Combo System** | ⬜ Todo | Bonus points for destroying enemies in quick succession |
+| **Wave/Formation Patterns** | ⬜ Todo | Different enemy formations per level (V-shape, diamond, spiral) |
 
 ### Phase 3: Visual & Audio Polish (4+ hours each)
 
