@@ -6,8 +6,8 @@ import { GAME, TOUCH_CONTROLS } from '../constants.js';
  */
 export class TouchControlManager {
   constructor() {
-    // Device capability detection
-    this.touchSupported = 'ontouchstart' in window;
+    // Device capability detection - check both methods for better compatibility
+    this.touchSupported = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.enabled = false;
 
     // Track all active touches
@@ -197,7 +197,7 @@ export class TouchControlManager {
   }
 
   /**
-   * Get touch coordinates relative to canvas
+   * Get touch coordinates relative to canvas, accounting for CSS scaling
    * @param {Touch} touch
    * @returns {{x: number, y: number}}
    */
@@ -208,8 +208,15 @@ export class TouchControlManager {
     }
 
     const rect = gameCanvas.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+
+    // Calculate scale factors to account for CSS scaling
+    // When canvas is displayed at different size than internal resolution
+    const scaleX = gameCanvas.width / rect.width;
+    const scaleY = gameCanvas.height / rect.height;
+
+    // Get touch position relative to canvas, then scale to internal coordinates
+    const x = (touch.clientX - rect.left) * scaleX;
+    const y = (touch.clientY - rect.top) * scaleY;
 
     return { x, y };
   }
@@ -427,11 +434,16 @@ export class TouchControlManager {
   }
 
   /**
-   * Get button positions for rendering
-   * @returns {Object} Button position data
+   * Get button positions for rendering (lowercase keys for renderer compatibility)
+   * @returns {Object} Button position data with lowercase keys
    */
   getButtonPositions() {
-    return { ...this.buttonPositions };
+    return {
+      left: this.buttonPositions.LEFT,
+      right: this.buttonPositions.RIGHT,
+      fire: this.buttonPositions.FIRE,
+      pause: this.buttonPositions.PAUSE,
+    };
   }
 
   /**
