@@ -1,4 +1,4 @@
-import { GAME, GameState, GameMode, BUNKER, MYSTERY_SHIP, ENDLESS_MODE, POWERUPS } from './constants.js';
+import { GAME, GameState, GameMode, BUNKER, MYSTERY_SHIP, ENDLESS_MODE, POWERUPS, MUSIC } from './constants.js';
 import { CanvasRenderer } from './renderer/canvas-renderer.js';
 import { Starfield } from './renderer/starfield.js';
 import { TouchControlsRenderer } from './renderer/touch-controls-renderer.js';
@@ -10,6 +10,7 @@ import { ScoreManager } from './managers/score-manager.js';
 import { NameEntryManager } from './managers/name-entry-manager.js';
 import { PowerUpManager } from './managers/power-up-manager.js';
 import { SoundManager } from './audio/sound-manager.js';
+import { MusicManager } from './audio/music-manager.js';
 import { Player } from './entities/player.js';
 import { Bunker } from './entities/bunker.js';
 import { MysteryShip } from './entities/mystery-ship.js';
@@ -31,6 +32,11 @@ export class Game {
     this.nameEntryManager = new NameEntryManager();
     this.powerUpManager = new PowerUpManager();
     this.soundManager = new SoundManager();
+    this.musicManager = null; // Initialized after soundManager.init()
+
+    // Music state
+    this.musicEnabled = true;
+    this.currentMusicTrack = null;
 
     // Game state
     this.state = GameState.MENU;
@@ -70,11 +76,25 @@ export class Game {
     // First interaction initializes audio
     const initAudio = () => {
       this.soundManager.init();
+
+      // Initialize music manager with shared audio context
+      const audioContext = this.soundManager.getAudioContext();
+      const masterGain = this.soundManager.getMasterGain();
+      if (audioContext && masterGain) {
+        this.musicManager = new MusicManager(audioContext, masterGain);
+        this.musicManager.init();
+        // Start title music
+        this.musicManager.playTrack('title');
+        this.currentMusicTrack = 'title';
+      }
+
       document.removeEventListener('keydown', initAudio);
       document.removeEventListener('click', initAudio);
+      document.removeEventListener('touchstart', initAudio);
     };
     document.addEventListener('keydown', initAudio);
     document.addEventListener('click', initAudio);
+    document.addEventListener('touchstart', initAudio);
 
     // Start game loop
     requestAnimationFrame(this.gameLoop);
@@ -111,9 +131,12 @@ export class Game {
     // Always update starfield (renders in all states)
     this.starfield.update(deltaTime);
 
-    // Handle mute toggle in any state
+    // Handle mute toggle in any state (M key mutes both SFX and music)
     if (this.input.isMuteJustPressed()) {
       this.soundManager.toggleMute();
+      if (this.musicManager) {
+        this.musicManager.toggleMute();
+      }
     }
 
     switch (this.state) {
@@ -191,6 +214,9 @@ export class Game {
     // Pause toggle
     if (this.input.isPauseJustPressed()) {
       this.state = GameState.PAUSED;
+      if (this.musicManager) {
+        this.musicManager.pause();
+      }
       return;
     }
 
@@ -240,6 +266,17 @@ export class Game {
 
     // Check win/lose conditions
     this.checkGameConditions();
+
+    // Dynamic music switching in endless mode (battle -> boss at wave 10+)
+    if (this.musicManager && this.gameMode === GameMode.ENDLESS) {
+      const shouldPlayBoss = this.wave >= MUSIC.BOSS_WAVE_THRESHOLD;
+      const currentTrack = this.musicManager.getCurrentTrack();
+
+      if (shouldPlayBoss && currentTrack === 'battle') {
+        this.musicManager.fadeToTrack('boss');
+        this.currentMusicTrack = 'boss';
+      }
+    }
   }
 
   /**
@@ -264,6 +301,9 @@ export class Game {
   updatePaused() {
     if (this.input.isPauseJustPressed()) {
       this.state = GameState.PLAYING;
+      if (this.musicManager) {
+        this.musicManager.resume();
+      }
     }
   }
 
@@ -272,7 +312,13 @@ export class Game {
    */
   updateGameOver() {
     if (this.input.isRestartJustPressed()) {
-      this.startNewGame();
+      // Return to menu instead of directly starting new game
+      this.state = GameState.MENU;
+      // Play title music
+      if (this.musicManager) {
+        this.musicManager.fadeToTrack('title');
+        this.currentMusicTrack = 'title';
+      }
     }
   }
 
@@ -352,6 +398,11 @@ export class Game {
     const initials = this.nameEntryManager.getInitials();
     this.newHighScoreRank = this.scoreManager.addHighScore(initials);
     this.soundManager.playLevelComplete();
+    // Play title music for high score display/return to menu
+    if (this.musicManager) {
+      this.musicManager.fadeToTrack('title');
+      this.currentMusicTrack = 'title';
+    }
   }
 
   /**
@@ -595,6 +646,12 @@ export class Game {
 
     this.state = GameState.PLAYING;
     this.soundManager.resume();
+
+    // Start battle music when game begins
+    if (this.musicManager) {
+      this.musicManager.fadeToTrack('battle');
+      this.currentMusicTrack = 'battle';
+    }
   }
 
   /**
@@ -616,6 +673,12 @@ export class Game {
 
     this.enemyManager.createFormation();
     this.state = GameState.PLAYING;
+
+    // Resume battle music after level complete
+    if (this.musicManager) {
+      this.musicManager.playTrack('battle');
+      this.currentMusicTrack = 'battle';
+    }
   }
 
   /**
@@ -641,6 +704,14 @@ export class Game {
 
     this.enemyManager.createFormation();
     this.state = GameState.PLAYING;
+
+    // Resume appropriate music after wave complete (battle or boss based on wave)
+    if (this.musicManager) {
+      const shouldPlayBoss = this.wave >= MUSIC.BOSS_WAVE_THRESHOLD;
+      const track = shouldPlayBoss ? 'boss' : 'battle';
+      this.musicManager.playTrack(track);
+      this.currentMusicTrack = track;
+    }
   }
 
   /**
@@ -650,6 +721,12 @@ export class Game {
     this.state = GameState.LEVEL_COMPLETE;
     this.levelTransitionTimer = 0;
     this.soundManager.playLevelComplete();
+
+    // Play victory jingle (one-shot) - will return to battle music when next level starts
+    if (this.musicManager) {
+      this.musicManager.playTrack('victory');
+      this.currentMusicTrack = 'victory';
+    }
   }
 
   /**
@@ -670,10 +747,20 @@ export class Game {
       this.newHighScoreRank = this.scoreManager.getScoreRank();
       this.state = GameState.NAME_ENTRY;
       this.soundManager.playPowerUp(); // Play celebratory sound
+      // Stop music during name entry (let player focus)
+      if (this.musicManager) {
+        this.musicManager.stopTrack();
+        this.currentMusicTrack = null;
+      }
     } else {
       // Regular game over
       this.state = GameState.GAME_OVER;
       this.soundManager.playGameOver();
+      // Play game over music
+      if (this.musicManager) {
+        this.musicManager.playTrack('gameOver');
+        this.currentMusicTrack = 'gameOver';
+      }
     }
   }
 
