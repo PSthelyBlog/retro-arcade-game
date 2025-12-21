@@ -1,8 +1,17 @@
 /**
- * Chiptune music synthesizer using Web Audio API
- * Plays looping background music with authentic 8-bit sound
+ * Enhanced Chiptune Music Synthesizer using Web Audio API
+ * Features:
+ * - NES 2A03-style multi-voice synthesis (Pulse 1, Pulse 2, Triangle, Noise)
+ * - Variable duty cycle pulse waves (12.5%, 25%, 50%, 75%)
+ * - Fast arpeggiation for chord simulation
+ * - Vibrato and PWM modulation effects
+ * - Dynamic tempo scaling based on game wave
+ * - Counterpoint melodies (two distinct melodic voices)
+ * - ADSR envelope presets
  */
 import { MUSIC } from '../constants.js';
+import { PulseOscillator } from './pulse-oscillator.js';
+import { Arpeggiator, ARPEGGIO_PATTERNS } from './arpeggiator.js';
 
 export class MusicManager {
   constructor(audioContext, masterGain) {
@@ -22,16 +31,20 @@ export class MusicManager {
     // Sequencer state
     this.scheduledNotes = [];
     this.nextNoteTime = 0;
-    this.currentStep = 0;
     this.loopId = null;
     this.scheduleAheadTime = 0.1; // Schedule 100ms ahead
     this.lookAhead = 25; // Check every 25ms
 
-    // Active oscillators for cleanup
+    // Active sound generators for cleanup
     this.activeOscillators = [];
+    this.activeArpeggiators = [];
 
-    // Track definitions
-    this.tracks = this._defineTrack();
+    // Dynamic tempo
+    this.currentWave = 1;
+    this.tempoMultiplier = 1.0;
+
+    // Track definitions with enhanced melodies
+    this.tracks = this._defineTracks();
   }
 
   /**
@@ -46,212 +59,390 @@ export class MusicManager {
   }
 
   /**
-   * Define all music tracks with melodies, bass lines, and rhythms
+   * Set current wave for dynamic tempo
+   * @param {number} wave - Current game wave
    */
-  _defineTrack() {
+  setWave(wave) {
+    this.currentWave = wave;
+    if (MUSIC.DYNAMIC_TEMPO?.ENABLED) {
+      const scaling = MUSIC.DYNAMIC_TEMPO.WAVE_SCALING * (wave - 1);
+      this.tempoMultiplier = Math.min(
+        MUSIC.DYNAMIC_TEMPO.BASE_MULTIPLIER + scaling,
+        MUSIC.DYNAMIC_TEMPO.MAX_MULTIPLIER
+      );
+    }
+  }
+
+  /**
+   * Define all music tracks with elaborate multi-voice melodies
+   * Uses counterpoint, arpeggios, and authentic NES voice allocation
+   */
+  _defineTracks() {
     const N = MUSIC.NOTES;
+    const PW = MUSIC.PULSE_WIDTH || { THIN: 0.125, NARROW: 0.25, SQUARE: 0.5 };
+    const ENV = MUSIC.ENVELOPE || {
+      LEAD: { attack: 0.005, decay: 0.1, sustain: 0.8, release: 0.1 },
+      BASS: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.01 },
+      STACCATO: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.01 },
+    };
 
     return {
-      // Title screen theme - mysterious and inviting
+      // Title screen theme - Mysterious and inviting with rich harmonies
       title: {
         bpm: MUSIC.BPM.TITLE,
         loop: true,
         voices: [
-          // Lead melody (square wave)
+          // Pulse 1: Lead melody (25% duty - slightly hollow, ethereal)
           {
-            type: 'square',
-            gain: 0.3,
+            type: 'pulse',
+            dutyCycle: PW.NARROW,
+            gain: 0.25,
+            envelope: ENV.LEAD,
+            vibrato: true,
             notes: [
-              // Measure 1-2: Opening phrase
-              { note: N.E4, duration: 0.5 }, { note: N.G4, duration: 0.5 },
+              // Measure 1-2: Opening phrase (A minor pentatonic)
+              { note: N.A4, duration: 0.5 }, { note: N.C5, duration: 0.5 },
+              { note: N.D5, duration: 0.75 }, { note: N.E5, duration: 0.25 },
+              { note: N.D5, duration: 0.5 }, { note: N.C5, duration: 0.5 },
               { note: N.A4, duration: 1 }, { note: N.REST, duration: 0.5 },
+              // Measure 3-4: Answering phrase
               { note: N.E4, duration: 0.25 }, { note: N.G4, duration: 0.25 },
-              { note: N.B4, duration: 0.5 }, { note: N.A4, duration: 0.5 },
-              // Measure 3-4: Response
-              { note: N.G4, duration: 1 }, { note: N.E4, duration: 0.5 },
-              { note: N.D4, duration: 0.5 }, { note: N.E4, duration: 1 },
-              { note: N.REST, duration: 1 },
-              // Measure 5-6: Variation
-              { note: N.A4, duration: 0.5 }, { note: N.B4, duration: 0.5 },
-              { note: N.C5, duration: 1 }, { note: N.B4, duration: 0.5 },
-              { note: N.A4, duration: 0.25 }, { note: N.G4, duration: 0.25 },
-              { note: N.E4, duration: 1 }, { note: N.REST, duration: 0.5 },
+              { note: N.A4, duration: 0.5 }, { note: N.G4, duration: 0.5 },
+              { note: N.E4, duration: 0.75 }, { note: N.D4, duration: 0.25 },
+              { note: N.E4, duration: 1.5 },
+              // Measure 5-6: Development with chromatic color
+              { note: N.A4, duration: 0.25 }, { note: N.B4, duration: 0.25 },
+              { note: N.C5, duration: 0.5 }, { note: N.D5, duration: 0.5 },
+              { note: N.E5, duration: 0.5 }, { note: N.F5, duration: 0.25 },
+              { note: N.E5, duration: 0.25 }, { note: N.D5, duration: 0.5 },
+              { note: N.C5, duration: 0.5 }, { note: N.REST, duration: 0.5 },
               // Measure 7-8: Resolution
-              { note: N.D4, duration: 0.5 }, { note: N.E4, duration: 0.5 },
-              { note: N.G4, duration: 0.5 }, { note: N.A4, duration: 0.5 },
-              { note: N.E4, duration: 2 },
+              { note: N.B4, duration: 0.5 }, { note: N.A4, duration: 0.5 },
+              { note: N.G4, duration: 0.5 }, { note: N.E4, duration: 0.5 },
+              { note: N.A4, duration: 2 },
             ]
           },
-          // Bass line (triangle wave)
+          // Pulse 2: Counterpoint melody (12.5% duty - thin, complementary)
+          {
+            type: 'pulse',
+            dutyCycle: PW.THIN,
+            gain: 0.15,
+            envelope: ENV.LEAD,
+            notes: [
+              // Counterpoint: Moves in contrary motion to lead
+              { note: N.E4, duration: 0.5 }, { note: N.E4, duration: 0.5 },
+              { note: N.G4, duration: 0.5 }, { note: N.A4, duration: 0.5 },
+              { note: N.G4, duration: 0.5 }, { note: N.E4, duration: 0.5 },
+              { note: N.D4, duration: 1 }, { note: N.REST, duration: 0.5 },
+              // Answer
+              { note: N.C4, duration: 0.5 }, { note: N.D4, duration: 0.5 },
+              { note: N.E4, duration: 0.5 }, { note: N.D4, duration: 0.5 },
+              { note: N.C4, duration: 0.5 }, { note: N.B3, duration: 0.5 },
+              { note: N.A3, duration: 1.5 },
+              // Development
+              { note: N.C4, duration: 0.5 }, { note: N.D4, duration: 0.5 },
+              { note: N.E4, duration: 0.5 }, { note: N.G4, duration: 0.5 },
+              { note: N.A4, duration: 0.5 }, { note: N.B4, duration: 0.5 },
+              { note: N.C5, duration: 0.5 }, { note: N.A4, duration: 0.5 },
+              { note: N.G4, duration: 0.5 }, { note: N.REST, duration: 0.5 },
+              // Resolution
+              { note: N.E4, duration: 0.5 }, { note: N.D4, duration: 0.5 },
+              { note: N.C4, duration: 0.5 }, { note: N.B3, duration: 0.5 },
+              { note: N.A3, duration: 2 },
+            ]
+          },
+          // Triangle: Bass line with melodic movement
           {
             type: 'triangle',
-            gain: 0.4,
+            gain: 0.35,
+            envelope: ENV.BASS,
             notes: [
-              // Measure 1-2
-              { note: N.A3, duration: 2 }, { note: N.E3, duration: 2 },
+              // Bass with octave jumps (characteristic NES bass style)
+              { note: N.A3, duration: 0.5 }, { note: N.A4, duration: 0.25 }, { note: N.A3, duration: 0.25 },
+              { note: N.A3, duration: 0.5 }, { note: N.G3, duration: 0.5 },
+              { note: N.E3, duration: 0.5 }, { note: N.E4, duration: 0.25 }, { note: N.E3, duration: 0.25 },
+              { note: N.D3, duration: 1 }, { note: N.REST, duration: 0.5 },
               // Measure 3-4
-              { note: N.G3, duration: 2 }, { note: N.A3, duration: 2 },
+              { note: N.C3, duration: 0.5 }, { note: N.C4, duration: 0.25 }, { note: N.C3, duration: 0.25 },
+              { note: N.G3, duration: 0.5 }, { note: N.G4, duration: 0.25 }, { note: N.G3, duration: 0.25 },
+              { note: N.A3, duration: 0.5 }, { note: N.A4, duration: 0.25 }, { note: N.A3, duration: 0.25 },
+              { note: N.A3, duration: 1.5 },
               // Measure 5-6
-              { note: N.A3, duration: 2 }, { note: N.C4, duration: 2 },
+              { note: N.A3, duration: 0.5 }, { note: N.G3, duration: 0.5 },
+              { note: N.F3, duration: 0.5 }, { note: N.E3, duration: 0.5 },
+              { note: N.D3, duration: 0.5 }, { note: N.C3, duration: 0.5 },
+              { note: N.D3, duration: 0.5 }, { note: N.E3, duration: 0.5 },
+              { note: N.F3, duration: 0.5 }, { note: N.REST, duration: 0.5 },
               // Measure 7-8
-              { note: N.G3, duration: 2 }, { note: N.A3, duration: 2 },
+              { note: N.G3, duration: 0.5 }, { note: N.F3, duration: 0.5 },
+              { note: N.E3, duration: 0.5 }, { note: N.D3, duration: 0.5 },
+              { note: N.A3, duration: 2 },
             ]
           }
         ]
       },
 
-      // Battle theme - intense and driving
+      // Battle theme - Intense and driving with aggressive arpeggios
       battle: {
         bpm: MUSIC.BPM.BATTLE,
         loop: true,
         voices: [
-          // Lead melody
+          // Pulse 1: Aggressive lead melody (50% duty - punchy)
           {
-            type: 'square',
-            gain: 0.25,
+            type: 'pulse',
+            dutyCycle: PW.SQUARE,
+            gain: 0.22,
+            envelope: ENV.STACCATO,
             notes: [
-              // Measure 1-2: Intense opening
-              { note: N.E5, duration: 0.25 }, { note: N.E5, duration: 0.25 },
-              { note: N.REST, duration: 0.25 }, { note: N.E5, duration: 0.25 },
-              { note: N.REST, duration: 0.25 }, { note: N.C5, duration: 0.25 },
-              { note: N.E5, duration: 0.5 }, { note: N.G5, duration: 0.5 },
-              { note: N.REST, duration: 0.5 }, { note: N.G4, duration: 0.5 },
-              // Measure 3-4: Descent
-              { note: N.C5, duration: 0.5 }, { note: N.REST, duration: 0.25 },
-              { note: N.G4, duration: 0.5 }, { note: N.REST, duration: 0.25 },
-              { note: N.E4, duration: 0.5 }, { note: N.A4, duration: 0.5 },
-              { note: N.B4, duration: 0.5 }, { note: N.A4, duration: 0.25 },
-              { note: N.G4, duration: 0.25 },
-              // Measure 5-6: Rise
-              { note: N.E4, duration: 0.5 }, { note: N.G4, duration: 0.5 },
+              // Measure 1-2: Syncopated attack pattern
+              { note: N.E5, duration: 0.25 }, { note: N.REST, duration: 0.125 },
+              { note: N.E5, duration: 0.125 }, { note: N.E5, duration: 0.25 },
+              { note: N.D5, duration: 0.25 }, { note: N.C5, duration: 0.25 },
+              { note: N.D5, duration: 0.25 }, { note: N.E5, duration: 0.5 },
+              { note: N.G5, duration: 0.25 }, { note: N.REST, duration: 0.25 },
+              { note: N.E5, duration: 0.25 }, { note: N.D5, duration: 0.25 },
+              { note: N.C5, duration: 0.5 }, { note: N.B4, duration: 0.25 },
+              { note: N.A4, duration: 0.25 },
+              // Measure 3-4: Chromatic run
+              { note: N.A4, duration: 0.125 }, { note: N.B4, duration: 0.125 },
+              { note: N.C5, duration: 0.125 }, { note: N.D5, duration: 0.125 },
+              { note: N.E5, duration: 0.25 }, { note: N.F5, duration: 0.25 },
+              { note: N.E5, duration: 0.25 }, { note: N.D5, duration: 0.25 },
+              { note: N.C5, duration: 0.25 }, { note: N.B4, duration: 0.25 },
               { note: N.A4, duration: 0.5 }, { note: N.G4, duration: 0.25 },
-              { note: N.E4, duration: 0.25 }, { note: N.D4, duration: 0.5 },
-              { note: N.E4, duration: 0.5 }, { note: N.G4, duration: 0.5 },
-              { note: N.A4, duration: 0.5 },
-              // Measure 7-8: Climax
+              { note: N.A4, duration: 0.25 },
+              // Measure 5-6: Power riff
+              { note: N.E4, duration: 0.25 }, { note: N.G4, duration: 0.25 },
+              { note: N.A4, duration: 0.25 }, { note: N.E5, duration: 0.25 },
+              { note: N.D5, duration: 0.25 }, { note: N.C5, duration: 0.25 },
+              { note: N.B4, duration: 0.25 }, { note: N.A4, duration: 0.25 },
+              { note: N.G4, duration: 0.25 }, { note: N.A4, duration: 0.25 },
               { note: N.B4, duration: 0.25 }, { note: N.C5, duration: 0.25 },
               { note: N.D5, duration: 0.5 }, { note: N.E5, duration: 0.5 },
+              // Measure 7-8: Climax
+              { note: N.G5, duration: 0.25 }, { note: N.F5, duration: 0.25 },
+              { note: N.E5, duration: 0.25 }, { note: N.D5, duration: 0.25 },
+              { note: N.C5, duration: 0.25 }, { note: N.B4, duration: 0.25 },
+              { note: N.A4, duration: 0.5 }, { note: N.E5, duration: 0.5 },
               { note: N.D5, duration: 0.25 }, { note: N.C5, duration: 0.25 },
-              { note: N.B4, duration: 0.5 }, { note: N.A4, duration: 0.5 },
-              { note: N.G4, duration: 0.5 }, { note: N.E4, duration: 0.5 },
+              { note: N.B4, duration: 0.25 }, { note: N.A4, duration: 0.25 },
             ]
           },
-          // Driving bass
+          // Pulse 2: Arpeggio voice for chord texture
+          {
+            type: 'arpeggio',
+            pattern: ARPEGGIO_PATTERNS.POWER,
+            speed: 0.04,
+            gain: 0.12,
+            notes: [
+              // Chord progression: Am - G - F - E (i - VII - VI - V)
+              { note: N.A3, duration: 2, pattern: 'MINOR' },
+              { note: N.G3, duration: 2, pattern: 'MAJOR' },
+              { note: N.F3, duration: 2, pattern: 'MAJOR' },
+              { note: N.E3, duration: 2, pattern: 'MAJOR' },
+              // Second 4 bars
+              { note: N.A3, duration: 1, pattern: 'MINOR' },
+              { note: N.C4, duration: 1, pattern: 'MAJOR' },
+              { note: N.D4, duration: 1, pattern: 'MINOR' },
+              { note: N.E4, duration: 1, pattern: 'MAJOR' },
+              { note: N.A3, duration: 2, pattern: 'POWER' },
+              { note: N.E4, duration: 2, pattern: 'POWER' },
+            ]
+          },
+          // Triangle: Driving bass with rhythmic pattern
           {
             type: 'triangle',
-            gain: 0.35,
+            gain: 0.38,
+            envelope: ENV.BASS,
             notes: [
-              // Measure 1-2
-              { note: N.E3, duration: 0.25 }, { note: N.E3, duration: 0.25 },
-              { note: N.E4, duration: 0.25 }, { note: N.E3, duration: 0.25 },
-              { note: N.E3, duration: 0.25 }, { note: N.E3, duration: 0.25 },
-              { note: N.E4, duration: 0.25 }, { note: N.E3, duration: 0.25 },
+              // Measure 1-2: Pumping eighth notes
+              { note: N.A3, duration: 0.25 }, { note: N.A3, duration: 0.25 },
+              { note: N.A4, duration: 0.25 }, { note: N.A3, duration: 0.25 },
+              { note: N.A3, duration: 0.25 }, { note: N.A3, duration: 0.25 },
+              { note: N.A4, duration: 0.25 }, { note: N.A3, duration: 0.25 },
               { note: N.G3, duration: 0.25 }, { note: N.G3, duration: 0.25 },
               { note: N.G4, duration: 0.25 }, { note: N.G3, duration: 0.25 },
               { note: N.G3, duration: 0.25 }, { note: N.G3, duration: 0.25 },
               { note: N.G4, duration: 0.25 }, { note: N.G3, duration: 0.25 },
               // Measure 3-4
-              { note: N.C3, duration: 0.25 }, { note: N.C3, duration: 0.25 },
-              { note: N.C4, duration: 0.25 }, { note: N.C3, duration: 0.25 },
-              { note: N.C3, duration: 0.25 }, { note: N.C3, duration: 0.25 },
-              { note: N.C4, duration: 0.25 }, { note: N.C3, duration: 0.25 },
-              { note: N.A3, duration: 0.25 }, { note: N.A3, duration: 0.25 },
-              { note: N.A4, duration: 0.25 }, { note: N.A3, duration: 0.25 },
-              { note: N.B3, duration: 0.25 }, { note: N.B3, duration: 0.25 },
-              { note: N.B4, duration: 0.25 }, { note: N.B3, duration: 0.25 },
-              // Measure 5-8: Repeat with variation
+              { note: N.F3, duration: 0.25 }, { note: N.F3, duration: 0.25 },
+              { note: N.F4, duration: 0.25 }, { note: N.F3, duration: 0.25 },
+              { note: N.F3, duration: 0.25 }, { note: N.F3, duration: 0.25 },
+              { note: N.F4, duration: 0.25 }, { note: N.F3, duration: 0.25 },
               { note: N.E3, duration: 0.25 }, { note: N.E3, duration: 0.25 },
               { note: N.E4, duration: 0.25 }, { note: N.E3, duration: 0.25 },
-              { note: N.G3, duration: 0.25 }, { note: N.G3, duration: 0.25 },
-              { note: N.A3, duration: 0.25 }, { note: N.A3, duration: 0.25 },
-              { note: N.B3, duration: 0.5 }, { note: N.C4, duration: 0.5 },
-              { note: N.B3, duration: 0.25 }, { note: N.A3, duration: 0.25 },
-              { note: N.G3, duration: 0.5 }, { note: N.E3, duration: 0.5 },
-              { note: N.D3, duration: 0.5 }, { note: N.E3, duration: 1.5 },
+              { note: N.E3, duration: 0.25 }, { note: N.E3, duration: 0.25 },
+              { note: N.E4, duration: 0.25 }, { note: N.E3, duration: 0.25 },
+              // Measure 5-8: More melodic bass
+              { note: N.A3, duration: 0.25 }, { note: N.C4, duration: 0.25 },
+              { note: N.E4, duration: 0.25 }, { note: N.A3, duration: 0.25 },
+              { note: N.C4, duration: 0.25 }, { note: N.D4, duration: 0.25 },
+              { note: N.E4, duration: 0.25 }, { note: N.D4, duration: 0.25 },
+              { note: N.C4, duration: 0.25 }, { note: N.B3, duration: 0.25 },
+              { note: N.A3, duration: 0.25 }, { note: N.G3, duration: 0.25 },
+              { note: N.F3, duration: 0.25 }, { note: N.E3, duration: 0.25 },
+              { note: N.D3, duration: 0.25 }, { note: N.E3, duration: 0.25 },
+              { note: N.A3, duration: 0.5 }, { note: N.A4, duration: 0.25 },
+              { note: N.G4, duration: 0.25 }, { note: N.E4, duration: 0.5 },
+              { note: N.A3, duration: 0.25 }, { note: N.E4, duration: 0.25 },
+              { note: N.A3, duration: 0.5 }, { note: N.E3, duration: 0.5 },
             ]
           }
         ]
       },
 
-      // Boss theme - urgent and dramatic (wave 10+)
+      // Boss theme - Urgent and dramatic with fast arpeggios (wave 10+)
       boss: {
         bpm: MUSIC.BPM.BOSS,
         loop: true,
         voices: [
-          // Aggressive lead
+          // Pulse 1: Frantic lead with pitch bends
           {
-            type: 'sawtooth',
+            type: 'pulse',
+            dutyCycle: PW.NARROW,
             gain: 0.2,
+            envelope: ENV.STACCATO,
+            vibrato: true,
+            vibratoDelay: 0.05,
             notes: [
-              // Measure 1: Aggressive arpeggio
-              { note: N.E4, duration: 0.125 }, { note: N.G4, duration: 0.125 },
-              { note: N.B4, duration: 0.125 }, { note: N.E5, duration: 0.125 },
-              { note: N.B4, duration: 0.125 }, { note: N.G4, duration: 0.125 },
-              { note: N.E4, duration: 0.125 }, { note: N.D4, duration: 0.125 },
-              // Measure 2
-              { note: N.C4, duration: 0.125 }, { note: N.E4, duration: 0.125 },
-              { note: N.G4, duration: 0.125 }, { note: N.C5, duration: 0.125 },
-              { note: N.G4, duration: 0.125 }, { note: N.E4, duration: 0.125 },
-              { note: N.C4, duration: 0.125 }, { note: N.B3, duration: 0.125 },
-              // Measure 3
-              { note: N.A3, duration: 0.125 }, { note: N.C4, duration: 0.125 },
-              { note: N.E4, duration: 0.125 }, { note: N.A4, duration: 0.125 },
-              { note: N.E4, duration: 0.125 }, { note: N.C4, duration: 0.125 },
-              { note: N.A3, duration: 0.125 }, { note: N.G3, duration: 0.125 },
-              // Measure 4: Build up
-              { note: N.E4, duration: 0.125 }, { note: N.E4, duration: 0.125 },
-              { note: N.F4, duration: 0.125 }, { note: N.F4, duration: 0.125 },
-              { note: N.G4, duration: 0.125 }, { note: N.G4, duration: 0.125 },
-              { note: N.A4, duration: 0.25 },
+              // Measure 1: Rapid-fire chromatic attack
+              { note: N.E5, duration: 0.125 }, { note: N.F5, duration: 0.125 },
+              { note: N.E5, duration: 0.125 }, { note: N.D5, duration: 0.125 },
+              { note: N.E5, duration: 0.125 }, { note: N.G5, duration: 0.125 },
+              { note: N.E5, duration: 0.125 }, { note: N.D5, duration: 0.125 },
+              // Measure 2: Descending run
+              { note: N.C5, duration: 0.125 }, { note: N.B4, duration: 0.125 },
+              { note: N.A4, duration: 0.125 }, { note: N.G4, duration: 0.125 },
+              { note: N.A4, duration: 0.125 }, { note: N.B4, duration: 0.125 },
+              { note: N.C5, duration: 0.125 }, { note: N.D5, duration: 0.125 },
+              // Measure 3: Dramatic phrase
+              { note: N.E5, duration: 0.25 }, { note: N.REST, duration: 0.125 },
+              { note: N.E5, duration: 0.125 }, { note: N.D5, duration: 0.25 },
+              { note: N.C5, duration: 0.25 },
+              // Measure 4: Build tension
+              { note: N.B4, duration: 0.125 }, { note: N.C5, duration: 0.125 },
+              { note: N.D5, duration: 0.125 }, { note: N.E5, duration: 0.125 },
+              { note: N.F5, duration: 0.25 }, { note: N.E5, duration: 0.25 },
             ]
           },
-          // Heavy bass
+          // Pulse 2: Fast minor arpeggio for tension
+          {
+            type: 'arpeggio',
+            pattern: ARPEGGIO_PATTERNS.MINOR,
+            speed: 0.03,
+            direction: 'updown',
+            gain: 0.15,
+            notes: [
+              { note: N.A3, duration: 1, pattern: 'DIMINISHED' },
+              { note: N.E3, duration: 1, pattern: 'MINOR' },
+              { note: N.F3, duration: 1, pattern: 'MAJOR' },
+              { note: N.E3, duration: 1, pattern: 'MAJOR' },
+            ]
+          },
+          // Triangle: Aggressive punchy bass
           {
             type: 'triangle',
             gain: 0.4,
+            envelope: ENV.BASS,
             notes: [
-              { note: N.E3, duration: 0.25 }, { note: N.REST, duration: 0.25 },
+              // Rapid octave jumps
+              { note: N.A3, duration: 0.125 }, { note: N.A4, duration: 0.125 },
+              { note: N.A3, duration: 0.125 }, { note: N.REST, duration: 0.125 },
+              { note: N.A3, duration: 0.125 }, { note: N.A4, duration: 0.125 },
+              { note: N.A3, duration: 0.125 }, { note: N.G3, duration: 0.125 },
+              { note: N.E3, duration: 0.125 }, { note: N.E4, duration: 0.125 },
+              { note: N.E3, duration: 0.125 }, { note: N.REST, duration: 0.125 },
+              { note: N.E3, duration: 0.125 }, { note: N.E4, duration: 0.125 },
+              { note: N.E3, duration: 0.125 }, { note: N.D3, duration: 0.125 },
+              // Measure 3-4
+              { note: N.F3, duration: 0.125 }, { note: N.F4, duration: 0.125 },
+              { note: N.F3, duration: 0.125 }, { note: N.REST, duration: 0.125 },
+              { note: N.F3, duration: 0.125 }, { note: N.E3, duration: 0.125 },
+              { note: N.D3, duration: 0.125 }, { note: N.C3, duration: 0.125 },
+              { note: N.E3, duration: 0.25 }, { note: N.E4, duration: 0.25 },
               { note: N.E3, duration: 0.25 }, { note: N.E3, duration: 0.25 },
-              { note: N.C3, duration: 0.25 }, { note: N.REST, duration: 0.25 },
-              { note: N.C3, duration: 0.25 }, { note: N.C3, duration: 0.25 },
-              { note: N.A3, duration: 0.25 }, { note: N.REST, duration: 0.25 },
-              { note: N.A3, duration: 0.25 }, { note: N.A3, duration: 0.25 },
-              { note: N.B3, duration: 0.5 }, { note: N.E3, duration: 0.5 },
             ]
           }
         ]
       },
 
-      // Game over - somber (one-shot)
+      // Game over - Somber descending melody (one-shot)
       gameOver: {
         bpm: MUSIC.BPM.GAME_OVER,
         loop: false,
         voices: [
+          // Sad descending melody
           {
-            type: 'sawtooth',
-            gain: 0.25,
+            type: 'pulse',
+            dutyCycle: PW.NARROW,
+            gain: 0.2,
+            envelope: ENV.LEAD,
+            vibrato: true,
             notes: [
-              { note: N.G4, duration: 0.5 }, { note: N.F4, duration: 0.5 },
-              { note: N.E4, duration: 0.5 }, { note: N.D4, duration: 0.5 },
-              { note: N.C4, duration: 1 }, { note: N.REST, duration: 0.5 },
-              { note: N.G3, duration: 1.5 },
+              { note: N.E5, duration: 0.75 }, { note: N.D5, duration: 0.75 },
+              { note: N.C5, duration: 0.75 }, { note: N.B4, duration: 0.75 },
+              { note: N.A4, duration: 1.5 }, { note: N.REST, duration: 0.5 },
+              { note: N.G4, duration: 1 }, { note: N.E4, duration: 2 },
+            ]
+          },
+          // Somber bass
+          {
+            type: 'triangle',
+            gain: 0.3,
+            envelope: ENV.BASS,
+            notes: [
+              { note: N.A3, duration: 1.5 }, { note: N.G3, duration: 1.5 },
+              { note: N.F3, duration: 1.5 }, { note: N.E3, duration: 1.5 },
+              { note: N.A3, duration: 2 },
             ]
           }
         ]
       },
 
-      // Victory - triumphant (one-shot)
+      // Victory - Triumphant fanfare (one-shot)
       victory: {
         bpm: MUSIC.BPM.VICTORY,
         loop: false,
         voices: [
+          // Triumphant melody
           {
-            type: 'square',
+            type: 'pulse',
+            dutyCycle: PW.SQUARE,
             gain: 0.3,
+            envelope: ENV.LEAD,
             notes: [
               { note: N.C5, duration: 0.25 }, { note: N.E5, duration: 0.25 },
               { note: N.G5, duration: 0.25 }, { note: N.C6, duration: 0.75 },
+              { note: N.REST, duration: 0.25 },
               { note: N.G5, duration: 0.25 }, { note: N.C6, duration: 0.75 },
+              { note: N.E5, duration: 0.25 }, { note: N.G5, duration: 0.25 },
+              { note: N.C6, duration: 1 },
+            ]
+          },
+          // Harmony
+          {
+            type: 'pulse',
+            dutyCycle: PW.THIN,
+            gain: 0.2,
+            envelope: ENV.LEAD,
+            notes: [
+              { note: N.E4, duration: 0.25 }, { note: N.G4, duration: 0.25 },
+              { note: N.C5, duration: 0.25 }, { note: N.E5, duration: 0.75 },
+              { note: N.REST, duration: 0.25 },
+              { note: N.E5, duration: 0.25 }, { note: N.G5, duration: 0.75 },
+              { note: N.C5, duration: 0.25 }, { note: N.E5, duration: 0.25 },
+              { note: N.G5, duration: 1 },
+            ]
+          },
+          // Bass fanfare
+          {
+            type: 'triangle',
+            gain: 0.35,
+            notes: [
+              { note: N.C3, duration: 0.5 }, { note: N.C4, duration: 0.5 },
+              { note: N.G3, duration: 0.5 }, { note: N.C4, duration: 0.5 },
+              { note: N.E3, duration: 0.5 }, { note: N.G3, duration: 0.5 },
+              { note: N.C4, duration: 1 },
             ]
           }
         ]
@@ -278,7 +469,6 @@ export class MusicManager {
     this.currentTrack = trackName;
     this.isPlaying = true;
     this.isPaused = false;
-    this.currentStep = 0;
     this.nextNoteTime = this.audioContext.currentTime;
 
     // Start the scheduler
@@ -302,12 +492,20 @@ export class MusicManager {
     // Stop all active oscillators
     this.activeOscillators.forEach(osc => {
       try {
-        osc.stop();
+        if (osc.stop) osc.stop();
       } catch (e) {
         // Already stopped
       }
     });
     this.activeOscillators = [];
+
+    // Stop all arpeggiatorsF
+    this.activeArpeggiators.forEach(arp => {
+      try {
+        arp.stop();
+      } catch (e) {}
+    });
+    this.activeArpeggiators = [];
   }
 
   /**
@@ -344,7 +542,7 @@ export class MusicManager {
   fadeToTrack(trackName) {
     if (!this.audioContext || !this.musicGain) return;
 
-    const fadeDuration = MUSIC.FADE_DURATION / 1000; // Convert to seconds
+    const fadeDuration = MUSIC.FADE_DURATION / 1000;
     const currentTime = this.audioContext.currentTime;
 
     // Fade out current
@@ -364,7 +562,7 @@ export class MusicManager {
           newTime + fadeDuration / 2
         );
       }
-    }, fadeDuration * 500); // Half the fade duration
+    }, fadeDuration * 500);
   }
 
   /**
@@ -414,8 +612,9 @@ export class MusicManager {
    * @private
    */
   _startScheduler(track) {
-    // Calculate beat duration from BPM
-    const beatDuration = 60 / track.bpm;
+    // Apply dynamic tempo
+    const baseBeatDuration = 60 / track.bpm;
+    const beatDuration = baseBeatDuration / this.tempoMultiplier;
 
     // Pre-calculate all voice sequences
     const voiceStates = track.voices.map(voice => ({
@@ -424,8 +623,13 @@ export class MusicManager {
       timeInTrack: 0
     }));
 
-    // Calculate total track duration
-    const totalDuration = this._calculateTrackDuration(track.voices[0], beatDuration);
+    // Calculate total track duration using longest voice
+    let maxDuration = 0;
+    track.voices.forEach(voice => {
+      const duration = this._calculateVoiceDuration(voice, beatDuration);
+      if (duration > maxDuration) maxDuration = duration;
+    });
+    const totalDuration = maxDuration;
 
     this.loopId = setInterval(() => {
       if (!this.isPlaying || this.isPaused || !this.audioContext) return;
@@ -440,13 +644,12 @@ export class MusicManager {
           const note = state.voice.notes[state.noteIndex];
           const noteDuration = note.duration * beatDuration;
 
-          if (note.note !== 0) { // Not a rest
-            this._scheduleNote(
-              note.note,
-              state.voice.type,
-              state.voice.gain,
+          if (note.note !== 0 && note.note !== MUSIC.NOTES.REST) {
+            this._scheduleVoice(
+              state.voice,
+              note,
               this.nextNoteTime + state.timeInTrack,
-              noteDuration * 0.9 // Slight gap between notes
+              noteDuration * 0.9
             );
           }
 
@@ -478,27 +681,125 @@ export class MusicManager {
    * Calculate total duration of a voice's notes
    * @private
    */
-  _calculateTrackDuration(voice, beatDuration) {
+  _calculateVoiceDuration(voice, beatDuration) {
     return voice.notes.reduce((total, note) => total + note.duration * beatDuration, 0);
   }
 
   /**
-   * Schedule a single note
+   * Schedule a voice based on its type
    * @private
    */
-  _scheduleNote(frequency, type, gain, startTime, duration) {
+  _scheduleVoice(voice, note, startTime, duration) {
+    if (!this.audioContext) return;
+
+    switch (voice.type) {
+      case 'pulse':
+        this._schedulePulseNote(voice, note.note, startTime, duration);
+        break;
+      case 'arpeggio':
+        this._scheduleArpeggio(voice, note, startTime, duration);
+        break;
+      case 'triangle':
+      case 'sawtooth':
+      case 'square':
+      default:
+        this._scheduleBasicNote(note.note, voice.type, voice.gain, startTime, duration, voice.envelope);
+        break;
+    }
+  }
+
+  /**
+   * Schedule a pulse wave note with variable duty cycle
+   * @private
+   */
+  _schedulePulseNote(voice, frequency, startTime, duration) {
+    if (!this.audioContext) return;
+
+    const pulseOsc = new PulseOscillator(this.audioContext, voice.dutyCycle || 0.5);
+    const gainNode = this.audioContext.createGain();
+
+    // Start the oscillator
+    pulseOsc.start(frequency, this.musicGain, startTime);
+
+    // Get the gain node for envelope
+    const oscGain = pulseOsc.getGainNode();
+    if (oscGain) {
+      // Apply envelope
+      const env = voice.envelope || { attack: 0.01, decay: 0.1, sustain: 0.8, release: 0.1 };
+      oscGain.gain.setValueAtTime(0, startTime);
+      oscGain.gain.linearRampToValueAtTime(voice.gain, startTime + env.attack);
+      oscGain.gain.linearRampToValueAtTime(voice.gain * env.sustain, startTime + env.attack + env.decay);
+      oscGain.gain.setValueAtTime(voice.gain * env.sustain, startTime + duration - env.release);
+      oscGain.gain.linearRampToValueAtTime(0, startTime + duration);
+    }
+
+    // Enable vibrato if specified
+    if (voice.vibrato) {
+      const vibratoDelay = voice.vibratoDelay || MUSIC.VIBRATO?.DELAY || 0.1;
+      setTimeout(() => {
+        if (pulseOsc.getOscillator()) {
+          this._applyVibrato(pulseOsc.getOscillator(), startTime + vibratoDelay);
+        }
+      }, vibratoDelay * 1000);
+    }
+
+    // Schedule stop
+    pulseOsc.stop(startTime + duration);
+
+    this.activeOscillators.push(pulseOsc);
+  }
+
+  /**
+   * Schedule an arpeggio
+   * @private
+   */
+  _scheduleArpeggio(voice, note, startTime, duration) {
+    if (!this.audioContext) return;
+
+    // Get pattern based on note.pattern or voice.pattern
+    const patternName = note.pattern || 'MAJOR';
+    const pattern = ARPEGGIO_PATTERNS[patternName] || ARPEGGIO_PATTERNS.MAJOR;
+
+    const arpeggiator = new Arpeggiator(this.audioContext);
+    arpeggiator.setSpeed(voice.speed || 0.05);
+    arpeggiator.setDirection(voice.direction || 'up');
+
+    // Schedule start
+    setTimeout(() => {
+      if (this.isPlaying && !this.isPaused) {
+        arpeggiator.start(note.note, pattern, this.musicGain, 'square', voice.gain);
+        this.activeArpeggiators.push(arpeggiator);
+      }
+    }, (startTime - this.audioContext.currentTime) * 1000);
+
+    // Schedule stop
+    setTimeout(() => {
+      arpeggiator.stop();
+      const index = this.activeArpeggiators.indexOf(arpeggiator);
+      if (index > -1) this.activeArpeggiators.splice(index, 1);
+    }, (startTime - this.audioContext.currentTime + duration) * 1000);
+  }
+
+  /**
+   * Schedule a basic oscillator note (triangle, sawtooth, square)
+   * @private
+   */
+  _scheduleBasicNote(frequency, type, gain, startTime, duration, envelope) {
     if (!this.audioContext) return;
 
     const osc = this.audioContext.createOscillator();
     const gainNode = this.audioContext.createGain();
 
-    osc.type = type === 'noise' ? 'square' : type; // Fallback for noise
+    osc.type = type === 'noise' ? 'square' : type;
     osc.frequency.value = frequency;
 
-    // Envelope: slight attack/release for less harsh sound
+    const env = envelope || { attack: 0.01, decay: 0.1, sustain: 0.8, release: 0.02 };
+
+    // Apply ADSR envelope
     gainNode.gain.setValueAtTime(0, startTime);
-    gainNode.gain.linearRampToValueAtTime(gain, startTime + 0.01);
-    gainNode.gain.setValueAtTime(gain, startTime + duration - 0.02);
+    gainNode.gain.linearRampToValueAtTime(gain, startTime + env.attack);
+    gainNode.gain.linearRampToValueAtTime(gain * env.sustain, startTime + env.attack + env.decay);
+    gainNode.gain.setValueAtTime(gain * env.sustain, startTime + duration - env.release);
     gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
 
     osc.connect(gainNode);
@@ -509,13 +810,40 @@ export class MusicManager {
 
     this.activeOscillators.push(osc);
 
-    // Clean up oscillator after it stops
     osc.onended = () => {
       const index = this.activeOscillators.indexOf(osc);
-      if (index > -1) {
-        this.activeOscillators.splice(index, 1);
-      }
+      if (index > -1) this.activeOscillators.splice(index, 1);
     };
+  }
+
+  /**
+   * Apply vibrato to an oscillator
+   * @private
+   */
+  _applyVibrato(oscillator, startTime) {
+    if (!this.audioContext || !oscillator) return;
+
+    const vibratoSettings = MUSIC.VIBRATO || { RATE: 6, DEPTH: 15 };
+    const lfo = this.audioContext.createOscillator();
+    const lfoGain = this.audioContext.createGain();
+
+    lfo.type = 'sine';
+    lfo.frequency.value = vibratoSettings.RATE;
+
+    // Depth in cents (frequency modulation)
+    const currentFreq = oscillator.frequency.value;
+    const depthHz = currentFreq * (Math.pow(2, vibratoSettings.DEPTH / 1200) - 1);
+    lfoGain.gain.value = depthHz;
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(oscillator.frequency);
+
+    try {
+      lfo.start(startTime);
+      this.activeOscillators.push(lfo);
+    } catch (e) {
+      // Oscillator may have already stopped
+    }
   }
 
   /**

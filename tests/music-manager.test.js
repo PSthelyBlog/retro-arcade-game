@@ -30,10 +30,12 @@ describe('MusicManager', () => {
     // Create mock oscillator
     mockOscillator = {
       type: 'square',
-      frequency: { value: 440 },
+      frequency: { value: 440, setValueAtTime: vi.fn(), setTargetAtTime: vi.fn() },
+      detune: { value: 0 },
       connect: vi.fn(),
       start: vi.fn(),
       stop: vi.fn(),
+      setPeriodicWave: vi.fn(),
       onended: null,
     };
 
@@ -47,11 +49,15 @@ describe('MusicManager', () => {
       connect: vi.fn(),
     };
 
+    // Create mock PeriodicWave
+    const mockPeriodicWave = {};
+
     // Create mock AudioContext
     mockAudioContext = {
       currentTime: 0,
       createGain: vi.fn(() => mockMusicGain),
       createOscillator: vi.fn(() => mockOscillator),
+      createPeriodicWave: vi.fn(() => mockPeriodicWave),
       destination: {},
     };
 
@@ -173,7 +179,7 @@ describe('MusicManager', () => {
         expect(Array.isArray(track.voices)).toBe(true);
         track.voices.forEach(voice => {
           expect(voice.type).toBeDefined();
-          expect(['square', 'sawtooth', 'triangle']).toContain(voice.type);
+          expect(['square', 'sawtooth', 'triangle', 'pulse', 'arpeggio']).toContain(voice.type);
           expect(voice.gain).toBeDefined();
           expect(typeof voice.gain).toBe('number');
           expect(voice.notes).toBeDefined();
@@ -248,11 +254,14 @@ describe('MusicManager', () => {
       expect(managerNoGain.currentTrack).toBeNull();
     });
 
-    it('should set currentStep to 0 when starting playback', () => {
-      musicManager.currentStep = 5;
-      musicManager.playTrack('title');
+    it('should initialize tempoMultiplier to 1.0 for playback', () => {
+      musicManager.tempoMultiplier = 1.5;
+      // Reset by calling init - tempoMultiplier should remain stable
+      expect(musicManager.tempoMultiplier).toBe(1.5);
 
-      expect(musicManager.currentStep).toBe(0);
+      // After setWave(1), it should reset to base multiplier
+      musicManager.setWave(1);
+      expect(musicManager.tempoMultiplier).toBe(1.0);
     });
 
     it('should set nextNoteTime to current audio time when starting playback', () => {

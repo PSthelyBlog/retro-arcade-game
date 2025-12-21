@@ -341,10 +341,16 @@ export const MUSIC = {
   NOTES: {
     // Octave 3
     C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
+    // Octave 3 sharp/flat notes
+    Cs3: 138.59, Ds3: 155.56, Fs3: 185.00, Gs3: 207.65, As3: 233.08,
     // Octave 4
     C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+    // Octave 4 sharp/flat notes
+    Cs4: 277.18, Ds4: 311.13, Fs4: 369.99, Gs4: 415.30, As4: 466.16,
     // Octave 5
     C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, B5: 987.77,
+    // Octave 5 sharp/flat notes
+    Cs5: 554.37, Ds5: 622.25, Fs5: 739.99, Gs5: 830.61, As5: 932.33,
     // Octave 6
     C6: 1046.50,
     // Rest (silence)
@@ -353,5 +359,62 @@ export const MUSIC = {
 
   // Boss wave threshold for switching to boss theme
   BOSS_WAVE_THRESHOLD: 10,
+
+  // NES 2A03 pulse width modulation (duty cycle options)
+  PULSE_WIDTH: {
+    THIN: 0.125,      // 12.5% - thin, nasal, buzzy
+    NARROW: 0.25,     // 25% - slightly hollow
+    SQUARE: 0.5,      // 50% - pure square wave
+    WIDE: 0.75,       // 75% - same as 25% (symmetric)
+  },
+
+  // Fast arpeggiator settings for chord effects
+  ARPEGGIO: {
+    SPEED: 0.05,           // 50ms per step (very fast)
+    PATTERNS: {
+      MAJOR: [0, 4, 7],    // Major chord intervals (semitones)
+      MINOR: [0, 3, 7],    // Minor chord
+      SUS4: [0, 5, 7],     // Suspended 4th
+      POWER: [0, 7, 12],   // Power chord (octave)
+      OCTAVE: [0, 12],     // Octave jump
+      SIXTH: [0, 4, 7, 9], // Major 6th
+    },
+  },
+
+  // LFO pitch modulation for vibrato effects
+  VIBRATO: {
+    RATE: 6,        // Hz - LFO speed
+    DEPTH: 15,      // Cents (100 cents = 1 semitone)
+    DELAY: 0.1,     // Seconds before vibrato kicks in
+  },
+
+  // Pulse Width Modulation for dynamic timbre
+  PWM: {
+    RATE: 2,        // Hz - modulation speed
+    DEPTH: 0.2,     // How much to vary duty cycle (0-0.5)
+  },
+
+  // ADSR envelope presets for different instrument sounds
+  ENVELOPE: {
+    LEAD: { attack: 0.005, decay: 0.1, sustain: 0.8, release: 0.1 },
+    BASS: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.01 },
+    STACCATO: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.01 },
+    PAD: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.3 },
+  },
+
+  // Dynamic tempo scaling based on game difficulty/wave
+  DYNAMIC_TEMPO: {
+    ENABLED: true,
+    BASE_MULTIPLIER: 1.0,
+    WAVE_SCALING: 0.02,    // +2% per wave
+    MAX_MULTIPLIER: 1.5,   // Cap at 150% speed
+  },
+
+  // Common game music chord progressions (semitone intervals from root)
+  CHORD_PROGRESSIONS: {
+    VICTORY: [[0, 'major'], [5, 'major'], [7, 'major']], // I - IV - V
+    INTENSE: [[0, 'minor'], [5, 'minor'], [7, 'major']], // i - iv - V
+    MYSTERIOUS: [[0, 'minor'], [3, 'major'], [5, 'minor']], // i - III - iv
+  },
 };
 
