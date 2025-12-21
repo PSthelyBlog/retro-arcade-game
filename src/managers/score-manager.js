@@ -25,6 +25,7 @@ export class ScoreManager {
     this.extraLivesAwarded = 0;
     this.gameMode = 'classic';
     this.wave = 1;
+    this.maxCombo = 0;
 
     // Load high scores (array of entries) and legacy high score
     this.highScores = this.loadHighScores();
@@ -208,6 +209,24 @@ export class ScoreManager {
   }
 
   /**
+   * Update maximum combo if the new value is higher
+   * @param {number} combo
+   */
+  setMaxCombo(combo) {
+    if (combo > this.maxCombo) {
+      this.maxCombo = combo;
+    }
+  }
+
+  /**
+   * Get maximum combo achieved
+   * @returns {number}
+   */
+  getMaxCombo() {
+    return this.maxCombo;
+  }
+
+  /**
    * Check if current score qualifies for high score board
    * @returns {boolean}
    */
@@ -250,6 +269,7 @@ export class ScoreManager {
     const entry = {
       initials: initials.toUpperCase().substring(0, 3),
       score: this.score,
+      maxCombo: this.maxCombo,
       timestamp: Date.now(),
     };
 
@@ -306,6 +326,7 @@ export class ScoreManager {
     this.level = 1;
     this.wave = 1;
     this.extraLivesAwarded = 0;
+    this.maxCombo = 0;
   }
 
   /**

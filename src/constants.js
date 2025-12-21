@@ -190,6 +190,40 @@ export const POWERUPS = {
   },
 };
 
+/**
+ * Combo system configuration
+ * Tracks consecutive enemy kills and applies multipliers to score
+ */
+export const COMBO = {
+  TIMEOUT: 1500,         // ms before combo resets
+  GRACE_PERIOD: 200,     // ms added per kill
+  MAX_MULTIPLIER: 3.0,   // Cap at 3x
+  MULTIPLIERS: {
+    2: 1.5,
+    3: 2.0,
+    4: 2.5,
+    5: 3.0,  // 5+ stays at 3.0
+  },
+  POPUP: {
+    DURATION: 1000,      // How long popup shows
+    RISE_SPEED: 1.5,     // Pixels per frame
+    FADE_START: 0.7,     // Start fading at 70% through duration
+    FONT_SIZE: 24,
+    COLOR: '#FFFF00',    // Yellow for combo messages
+    BROKEN_COLOR: '#FF4444', // Red for "COMBO BROKEN"
+  },
+  EFFECTS: {
+    SCREEN_SHAKE: false,  // Shake on 5x combo?
+    COLOR_FLASH: true,    // Flash combo counter color
+  },
+  SOUNDS: {
+    COMBO_2: true,        // Play sound at 2x combo
+    COMBO_3: true,        // Play sound at 3x combo
+    COMBO_5: true,        // Play sound at 5x combo
+    BROKEN: true,         // Play sound when combo breaks
+  },
+};
+
 export const Keys = {
   LEFT: ['ArrowLeft', 'KeyA'],
   RIGHT: ['ArrowRight', 'KeyD'],

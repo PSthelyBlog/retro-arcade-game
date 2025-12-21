@@ -474,4 +474,72 @@ export class SoundManager {
     osc.start();
     osc.stop(this.audioContext.currentTime + 1);
   }
+
+  /**
+   * Play combo milestone sound based on combo count
+   * @param {number} comboCount - The current combo count
+   */
+  playComboMilestone(comboCount) {
+    if (!this.initialized || this.muted) return;
+
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = 'square';
+    gain.gain.setValueAtTime(0.25, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.25);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    let notes = [];
+
+    if (comboCount === 2) {
+      // 2x combo: Quick rising arpeggio (C4 → E4 → G4)
+      notes = [261.63, 329.63, 392]; // C4, E4, G4
+    } else if (comboCount === 3) {
+      // 3x combo: Higher arpeggio (E4 → G4 → C5)
+      notes = [329.63, 392, 523.25]; // E4, G4, C5
+    } else if (comboCount >= 5) {
+      // 5x+ combo: Full chord blast with layered square waves
+      // Play a C major chord (C E G) simultaneously by rapid alternation
+      notes = [261.63, 329.63, 392, 261.63, 329.63, 392]; // C4 E4 G4 repeated twice
+    }
+
+    if (notes.length > 0) {
+      let time = this.audioContext.currentTime;
+      const noteDuration = 0.05; // 50ms per note
+
+      for (const note of notes) {
+        osc.frequency.setValueAtTime(note, time);
+        time += noteDuration;
+      }
+
+      osc.start();
+      osc.stop(this.audioContext.currentTime + (notes.length * noteDuration));
+    }
+  }
+
+  /**
+   * Play combo broken sound - descending "womp womp"
+   */
+  playComboBroken() {
+    if (!this.initialized || this.muted) return;
+
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(261.63, this.audioContext.currentTime); // C4
+    osc.frequency.exponentialRampToValueAtTime(196, this.audioContext.currentTime + 0.2); // G3
+
+    gain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.2);
+  }
 }
