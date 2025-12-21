@@ -384,10 +384,10 @@ describe('TouchControlManager', () => {
       manager.start();
       const positions = manager.getButtonPositions();
 
-      expect(positions).toHaveProperty('LEFT');
-      expect(positions).toHaveProperty('RIGHT');
-      expect(positions).toHaveProperty('FIRE');
-      expect(positions).toHaveProperty('PAUSE');
+      expect(positions).toHaveProperty('left');
+      expect(positions).toHaveProperty('right');
+      expect(positions).toHaveProperty('fire');
+      expect(positions).toHaveProperty('pause');
     });
 
     it('should return object with correct position properties', () => {
@@ -411,39 +411,39 @@ describe('TouchControlManager', () => {
 
       expect(positions1).not.toBe(positions2);
       // Objects are equal but different instances
-      expect(positions1.LEFT).toEqual(positions2.LEFT);
+      expect(positions1.left).toEqual(positions2.left);
     });
 
-    it('should have LEFT button positioned at bottom-left', () => {
+    it('should have left button positioned at bottom-left', () => {
       manager.start();
       const positions = manager.getButtonPositions();
 
-      expect(positions.LEFT.x).toBeLessThan(GAME.WIDTH / 2);
-      expect(positions.LEFT.y).toBeGreaterThan(GAME.HEIGHT / 2);
+      expect(positions.left.x).toBeLessThan(GAME.WIDTH / 2);
+      expect(positions.left.y).toBeGreaterThan(GAME.HEIGHT / 2);
     });
 
-    it('should have RIGHT button positioned next to LEFT', () => {
+    it('should have right button positioned next to left', () => {
       manager.start();
       const positions = manager.getButtonPositions();
 
-      expect(positions.RIGHT.x).toBeGreaterThan(positions.LEFT.x);
-      expect(positions.RIGHT.y).toBe(positions.LEFT.y);
+      expect(positions.right.x).toBeGreaterThan(positions.left.x);
+      expect(positions.right.y).toBe(positions.left.y);
     });
 
-    it('should have FIRE button positioned at bottom-right', () => {
+    it('should have fire button positioned at bottom-right', () => {
       manager.start();
       const positions = manager.getButtonPositions();
 
-      expect(positions.FIRE.x).toBeGreaterThan(GAME.WIDTH / 2);
-      expect(positions.FIRE.y).toBeGreaterThan(GAME.HEIGHT / 2);
+      expect(positions.fire.x).toBeGreaterThan(GAME.WIDTH / 2);
+      expect(positions.fire.y).toBeGreaterThan(GAME.HEIGHT / 2);
     });
 
-    it('should have PAUSE button positioned at top-right', () => {
+    it('should have pause button positioned at top-right', () => {
       manager.start();
       const positions = manager.getButtonPositions();
 
-      expect(positions.PAUSE.x).toBeGreaterThan(GAME.WIDTH / 2);
-      expect(positions.PAUSE.y).toBeLessThan(GAME.HEIGHT / 2);
+      expect(positions.pause.x).toBeGreaterThan(GAME.WIDTH / 2);
+      expect(positions.pause.y).toBeLessThan(GAME.HEIGHT / 2);
     });
   });
 
@@ -506,7 +506,7 @@ describe('TouchControlManager', () => {
 
     it('should detect hit within button radius', () => {
       const positions = manager.getButtonPositions();
-      const leftPos = positions.LEFT;
+      const leftPos = positions.left;
 
       const touch = createTouch(leftPos.x, leftPos.y, 0);
       expect(manager.isPointInButton(touch.clientX - 0, touch.clientY - 0, leftPos)).toBe(true);
@@ -514,7 +514,7 @@ describe('TouchControlManager', () => {
 
     it('should not detect hit outside button radius', () => {
       const positions = manager.getButtonPositions();
-      const leftPos = positions.LEFT;
+      const leftPos = positions.left;
 
       const x = leftPos.x + leftPos.radius + 10;
       const y = leftPos.y;
@@ -523,7 +523,7 @@ describe('TouchControlManager', () => {
 
     it('should detect hit at button boundary', () => {
       const positions = manager.getButtonPositions();
-      const leftPos = positions.LEFT;
+      const leftPos = positions.left;
 
       const angle = Math.PI / 4;
       const x = leftPos.x + Math.cos(angle) * (leftPos.radius - 0.5);
@@ -533,7 +533,7 @@ describe('TouchControlManager', () => {
 
     it('should use circular hit detection', () => {
       const positions = manager.getButtonPositions();
-      const leftPos = positions.LEFT;
+      const leftPos = positions.left;
 
       // Point above button but within radius
       const x = leftPos.x;
@@ -742,13 +742,13 @@ describe('TouchControlManager', () => {
       manager.setCanvasDimensions(newWidth, newHeight);
       const newPositions = manager.getButtonPositions();
 
-      // LEFT button x should stay same (left offset is fixed)
-      expect(newPositions.LEFT.x).toBe(originalPositions.LEFT.x);
+      // left button x should stay same (left offset is fixed)
+      expect(newPositions.left.x).toBe(originalPositions.left.x);
       // But y changes with canvas height
-      expect(newPositions.LEFT.y).toBeGreaterThan(originalPositions.LEFT.y);
+      expect(newPositions.left.y).toBeGreaterThan(originalPositions.left.y);
 
-      // FIRE button x should be further right with wider screen
-      expect(newPositions.FIRE.x).toBeGreaterThan(originalPositions.FIRE.x);
+      // fire button x should be further right with wider screen
+      expect(newPositions.fire.x).toBeGreaterThan(originalPositions.fire.x);
     });
 
     it('should handle resize event', () => {
@@ -1116,10 +1116,10 @@ describe('InputHandler Touch Integration', () => {
       inputHandler.touchControls.start();
       const positions = inputHandler.getTouchButtonPositions();
 
-      expect(positions).toHaveProperty('LEFT');
-      expect(positions).toHaveProperty('RIGHT');
-      expect(positions).toHaveProperty('FIRE');
-      expect(positions).toHaveProperty('PAUSE');
+      expect(positions).toHaveProperty('left');
+      expect(positions).toHaveProperty('right');
+      expect(positions).toHaveProperty('fire');
+      expect(positions).toHaveProperty('pause');
     });
 
     it('should return same positions as touch manager', () => {
@@ -1328,25 +1328,17 @@ describe('Integration Scenarios', () => {
     const startEvent = createTouchEvent('touchstart', [touch]);
     manager.handleTouchStart(startEvent);
 
-    // Get positions and states from manager
-    const managerPositions = manager.getButtonPositions();
-    const managerStates = manager.getButtonStates();
-
-    // Convert to lowercase keys for renderer
-    const rendererPositions = {
-      left: managerPositions.LEFT,
-      right: managerPositions.RIGHT,
-      fire: managerPositions.FIRE,
-      pause: managerPositions.PAUSE,
-    };
+    // Get positions and states from manager (now returns lowercase keys)
+    const buttonPositions = manager.getButtonPositions();
+    const buttonStates = manager.getButtonStates();
 
     const drawSpy = vi.spyOn(renderer, 'drawLeftButton');
-    renderer.draw(mockCtx, rendererPositions, managerStates);
+    renderer.draw(mockCtx, buttonPositions, buttonStates);
 
     // Verify rendering was performed
     expect(drawSpy).toHaveBeenCalled();
     // Button should be rendered as pressed
-    expect(drawSpy).toHaveBeenCalledWith(mockCtx, rendererPositions.left, true);
+    expect(drawSpy).toHaveBeenCalledWith(mockCtx, buttonPositions.left, true);
   });
 
   it('should integrate touch with input handler', () => {
