@@ -74,8 +74,10 @@ export class CanvasRenderer {
    * @param {number} lives - Player lives
    * @param {number} level - Current level
    * @param {Object} [controllerStatus] - Controller connection status
+   * @param {number} [comboCount=0] - Current combo count
+   * @param {number} [multiplier=1.0] - Score multiplier
    */
-  drawHUD(score, highScore, lives, level, controllerStatus = null) {
+  drawHUD(score, highScore, lives, level, controllerStatus = null, comboCount = 0, multiplier = 1.0) {
     this.ctx.fillStyle = UI.TEXT_COLOR;
     this.ctx.font = `${UI.FONT_SIZE}px ${UI.FONT_FAMILY}`;
 
@@ -94,6 +96,11 @@ export class CanvasRenderer {
     // Draw life icons
     for (let i = 0; i < lives; i++) {
       this.drawLifeIcon(UI.LIVES_X + 100 + i * 30, UI.LIVES_Y - 15);
+    }
+
+    // Draw combo HUD if active
+    if (comboCount >= 2) {
+      this.drawComboHUD(comboCount, multiplier, true);
     }
 
     // Controller indicator (bottom right)
@@ -745,8 +752,10 @@ export class CanvasRenderer {
    * @param {number} lives - Player lives
    * @param {number} wave - Current wave
    * @param {Object} [controllerStatus] - Controller connection status
+   * @param {number} [comboCount=0] - Current combo count
+   * @param {number} [multiplier=1.0] - Score multiplier
    */
-  drawHUDEndless(score, highScore, lives, wave, controllerStatus = null) {
+  drawHUDEndless(score, highScore, lives, wave, controllerStatus = null, comboCount = 0, multiplier = 1.0) {
     this.ctx.fillStyle = UI.TEXT_COLOR;
     this.ctx.font = `${UI.FONT_SIZE}px ${UI.FONT_FAMILY}`;
 
@@ -776,6 +785,11 @@ export class CanvasRenderer {
     // Draw life icons
     for (let i = 0; i < lives; i++) {
       this.drawLifeIcon(UI.LIVES_X + 100 + i * 30, UI.LIVES_Y - 15);
+    }
+
+    // Draw combo HUD if active
+    if (comboCount >= 2) {
+      this.drawComboHUD(comboCount, multiplier, true);
     }
 
     // Controller indicator (bottom right)
@@ -1060,6 +1074,65 @@ export class CanvasRenderer {
     this.ctx.stroke();
 
     this.ctx.restore();
+  }
+
+  /**
+   * Draw combo HUD display on the right side
+   * @param {number} comboCount - Number of consecutive hits
+   * @param {number} multiplier - Score multiplier (e.g., 1.5, 2.0)
+   * @param {boolean} isActive - Whether combo is currently active
+   */
+  drawComboHUD(comboCount, multiplier, isActive) {
+    if (!isActive || comboCount < 2) return;
+
+    const x = GAME.WIDTH - 180;
+    const y = UI.SCORE_Y;
+
+    this.ctx.fillStyle = '#FFFF00';
+    this.ctx.font = `${UI.FONT_SIZE}px ${UI.FONT_FAMILY}`;
+
+    // Format: "COMBO: 3x (×2.0)"
+    const comboText = `COMBO: ${comboCount}x (×${multiplier.toFixed(1)})`;
+    this.ctx.fillText(comboText, x, y);
+
+    // Subtle scale animation when combo changes
+    const scale = 1 + Math.sin(Date.now() / 150) * 0.05;
+    this.ctx.save();
+    this.ctx.translate(x + comboText.length * 3, y - 5);
+    this.ctx.scale(scale, scale);
+    this.ctx.fillStyle = '#FFFF00';
+    this.ctx.font = `14px ${UI.FONT_FAMILY}`;
+    this.ctx.fillText('!', 0, 0);
+    this.ctx.restore();
+  }
+
+  /**
+   * Draw array of floating popup messages
+   * @param {Array<{text: string, x: number, y: number, color: string, opacity: number, fontSize: number}>} popups
+   */
+  drawPopups(popups) {
+    if (!popups || popups.length === 0) return;
+
+    for (const popup of popups) {
+      this.ctx.save();
+
+      // Set opacity
+      this.ctx.globalAlpha = popup.opacity;
+
+      // Set text properties
+      this.ctx.fillStyle = popup.color;
+      this.ctx.font = `${popup.fontSize}px ${UI.FONT_FAMILY}`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+
+      // Draw text centered at position
+      this.ctx.fillText(popup.text, popup.x, popup.y);
+
+      this.ctx.restore();
+    }
+
+    // Ensure globalAlpha is reset
+    this.ctx.globalAlpha = 1.0;
   }
 
   /**

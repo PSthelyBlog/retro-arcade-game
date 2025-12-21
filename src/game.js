@@ -1,4 +1,4 @@
-import { GAME, GameState, GameMode, BUNKER, MYSTERY_SHIP, ENDLESS_MODE, POWERUPS, MUSIC } from './constants.js';
+import { GAME, GameState, GameMode, BUNKER, MYSTERY_SHIP, ENDLESS_MODE, POWERUPS, MUSIC, COMBO } from './constants.js';
 import { CanvasRenderer } from './renderer/canvas-renderer.js';
 import { Starfield } from './renderer/starfield.js';
 import { TouchControlsRenderer } from './renderer/touch-controls-renderer.js';
@@ -9,6 +9,8 @@ import { CollisionDetector } from './managers/collision-detector.js';
 import { ScoreManager } from './managers/score-manager.js';
 import { NameEntryManager } from './managers/name-entry-manager.js';
 import { PowerUpManager } from './managers/power-up-manager.js';
+import { ComboManager } from './managers/combo-manager.js';
+import { PopupManager } from './managers/popup-manager.js';
 import { SoundManager } from './audio/sound-manager.js';
 import { MusicManager } from './audio/music-manager.js';
 import { Player } from './entities/player.js';
@@ -31,6 +33,8 @@ export class Game {
     this.scoreManager = new ScoreManager();
     this.nameEntryManager = new NameEntryManager();
     this.powerUpManager = new PowerUpManager();
+    this.comboManager = new ComboManager();
+    this.popupManager = new PopupManager();
     this.soundManager = new SoundManager();
     this.musicManager = null; // Initialized after soundManager.init()
 
@@ -261,6 +265,19 @@ export class Game {
     // Update screen shake
     this.renderer.updateShake(deltaTime);
 
+    // Update combo system (check if combo expired)
+    const comboResult = this.comboManager.update(performance.now());
+    if (comboResult.comboBroken && comboResult.previousCount >= 2) {
+      // Combo broken - show popup and play sound
+      this.popupManager.addComboBrokenPopup(comboResult.previousCount, GAME.WIDTH / 2, GAME.HEIGHT / 2);
+      if (COMBO.SOUNDS.BROKEN) {
+        this.soundManager.playComboBroken();
+      }
+    }
+
+    // Update popups
+    this.popupManager.update(deltaTime);
+
     // Check collisions
     this.checkCollisions();
 
@@ -456,11 +473,32 @@ export class Game {
     );
     for (const { projectile, enemy } of enemyHits) {
       projectile.deactivate();
-      const points = this.enemyManager.removeEnemy(enemy);
+      const basePoints = this.enemyManager.removeEnemy(enemy);
       const enemyCenterX = enemy.x + enemy.width / 2;
       const enemyCenterY = enemy.y + enemy.height / 2;
       this.addExplosion(enemyCenterX, enemyCenterY);
       this.soundManager.playExplosion();
+
+      // Register kill with combo system
+      const comboState = this.comboManager.registerKill(performance.now());
+
+      // Apply combo multiplier to points
+      const points = Math.floor(basePoints * comboState.multiplier);
+
+      // Show combo popup on milestone
+      if (comboState.isMilestone && comboState.comboCount >= 2) {
+        this.popupManager.addComboPopup(comboState.comboCount, enemyCenterX, enemyCenterY - 20);
+
+        // Play combo milestone sound
+        if ((comboState.comboCount === 2 && COMBO.SOUNDS.COMBO_2) ||
+            (comboState.comboCount === 3 && COMBO.SOUNDS.COMBO_3) ||
+            (comboState.comboCount >= 5 && COMBO.SOUNDS.COMBO_5)) {
+          this.soundManager.playComboMilestone(comboState.comboCount);
+        }
+      }
+
+      // Update max combo in score manager
+      this.scoreManager.setMaxCombo(this.comboManager.getMaxCombo());
 
       // Try to spawn a power-up at enemy location
       if (this.powerUpManager.trySpawn(enemyCenterX, enemyCenterY)) {
@@ -631,6 +669,8 @@ export class Game {
     this.scoreManager.reset();
     this.projectileManager.clear();
     this.powerUpManager.reset();
+    this.comboManager.reset();
+    this.popupManager.reset();
     this.explosions = [];
     this.mysteryShip = null;
     this.mysteryShipTimer = 0;
@@ -937,13 +977,18 @@ export class Game {
 
     // Draw HUD with controller status (different for classic vs endless mode)
     const controllerStatus = this.input.getControllerStatus();
+    const comboCount = this.comboManager.getCount();
+    const comboMultiplier = this.comboManager.getMultiplier();
+
     if (this.gameMode === GameMode.ENDLESS) {
       this.renderer.drawHUDEndless(
         this.scoreManager.getScore(),
         this.scoreManager.getHighScore(),
         this.player.lives,
         this.wave,
-        controllerStatus
+        controllerStatus,
+        comboCount,
+        comboMultiplier
       );
     } else {
       this.renderer.drawHUD(
@@ -951,13 +996,18 @@ export class Game {
         this.scoreManager.getHighScore(),
         this.player.lives,
         this.level,
-        controllerStatus
+        controllerStatus,
+        comboCount,
+        comboMultiplier
       );
     }
 
     // Draw power-up HUD (active effects with countdown timers)
     const activeEffects = this.powerUpManager.getActiveEffectsStatus(this.lastTime);
     this.renderer.drawPowerUpHUD(activeEffects);
+
+    // Draw combo popups
+    this.renderer.drawPopups(this.popupManager.getPopups());
 
     // Draw touch controls overlay (on touch devices)
     this.drawTouchControls(ctx);

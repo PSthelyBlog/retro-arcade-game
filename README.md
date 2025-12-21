@@ -24,6 +24,7 @@ npm run dev
 - 🕹️ **Classic Mode**: Authentic Space Invaders mechanics with 5 levels
 - ♾️ **Endless Mode**: Infinite waves with progressive difficulty scaling
 - ⚡ **Power-ups**: Collect shields, rapid fire, multi-shot, bombs, and extra lives
+- 🔥 **Combo System**: Chain kills for score multipliers up to 3x
 - 🏆 **Leaderboard**: Top 10 high scores with classic 3-letter initials entry
 - 🎮 **Controller Support**: Full gamepad support (Xbox, PlayStation, Nintendo, generic)
 
@@ -191,6 +192,30 @@ Fully synthesized chiptune music plays throughout the game, with different track
 - Independent from SFX mute (M key mutes both)
 - Automatically pauses when game is paused
 - Multi-voice synthesis (square, triangle, sawtooth waves)
+
+### Combo System 🔥
+
+Build combos by destroying enemies in quick succession for bonus score multipliers!
+
+| Combo | Multiplier | Notes |
+|-------|------------|-------|
+| 2x | ×1.5 | First milestone |
+| 3x | ×2.0 | Rising tone plays |
+| 4x | ×2.5 | Getting intense! |
+| 5x+ | ×3.0 | Maximum multiplier |
+
+**Mechanics:**
+- **Timing Window**: 1.5 seconds between kills, +200ms grace per kill
+- **Combo Display**: Shows "3x COMBO! (×2.0)" in HUD during active combo
+- **Floating Popups**: Yellow popup at kill location shows combo count
+- **Combo Broken**: Red "COMBO BROKEN" popup when combo expires
+- **Sound Effects**: Rising arpeggio at milestones (2, 3, 5, 10, 15, 20...)
+- **Max Combo Tracking**: Your best combo is saved with high scores
+
+**Tips:**
+- Focus on enemies in clusters for easier chains
+- Multi-shot power-up makes combos easier to build
+- Higher combos mean exponentially more points!
 
 ## 🏗️ Project Structure
 
@@ -405,11 +430,12 @@ See [Game Modes](#-game-modes) for details on how to use these features.
 | **Power-ups System** | ✅ Done | Shield, rapid fire, multi-shot, bomb, extra life - dropped by enemies |
 | **Touch Controls** | ✅ Done | On-screen virtual buttons for mobile play with haptic feedback |
 | **Background Music** | ✅ Done | 5 chiptune tracks (title, battle, boss, victory, game over) |
-| **Combo System** | ⬜ Todo | Bonus points for destroying enemies in quick succession |
+| **Combo System** | ✅ Done | Chain kills for ×1.5 to ×3.0 score multipliers |
 | **Wave/Formation Patterns** | ⬜ Todo | Different enemy formations per level (V-shape, diamond, spiral) |
 
 See [Touch (Mobile)](#touch-mobile-) controls for details on touch controls.
 See [Background Music](#background-music-) for details on the music system.
+See [Combo System](#combo-system-) for details on combo mechanics.
 
 ### Phase 3: Visual & Audio Polish (4+ hours each)
 
