@@ -66,7 +66,8 @@ export class ComboManager {
     this.lastKillTime = timestamp;
 
     // Add grace period for next kill
-    this.accumulatedGrace += COMBO.GRACE_PERIOD;
+    if(this.accumulatedGrace <= 1000)
+      this.accumulatedGrace += COMBO.GRACE_PERIOD;
 
     // Update multiplier
     this.multiplier = this.calculateMultiplier();
