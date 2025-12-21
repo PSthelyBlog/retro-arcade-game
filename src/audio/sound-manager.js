@@ -59,6 +59,22 @@ export class SoundManager {
   }
 
   /**
+   * Get the audio context for sharing with MusicManager
+   * @returns {AudioContext|null}
+   */
+  getAudioContext() {
+    return this.audioContext;
+  }
+
+  /**
+   * Get the master gain node for sharing with MusicManager
+   * @returns {GainNode|null}
+   */
+  getMasterGain() {
+    return this.masterGain;
+  }
+
+  /**
    * Play player shoot sound
    */
   playShoot() {

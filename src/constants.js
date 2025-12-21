@@ -302,3 +302,56 @@ export const TOUCH_CONTROLS = {
   HIT_PADDING: 20,                  // Extra padding around buttons for easier tapping
 };
 
+/**
+ * Music configuration for chiptune background music
+ * All music synthesized via Web Audio API - no external files needed
+ */
+export const MUSIC = {
+  // Global music settings
+  MASTER_VOLUME: 0.15,         // Music is quieter than SFX
+  FADE_DURATION: 500,          // Crossfade duration in ms
+
+  // Note timing
+  BPM: {
+    TITLE: 100,                // Mysterious, inviting
+    BATTLE: 140,               // Intense, driving
+    BOSS: 160,                 // Urgent, dramatic
+    GAME_OVER: 80,             // Somber
+    VICTORY: 120,              // Triumphant
+  },
+
+  // Track durations (in measures of 4/4)
+  MEASURES: {
+    TITLE: 8,                  // 8 measures loop
+    BATTLE: 8,                 // 8 measures loop
+    BOSS: 4,                   // 4 measures loop (more intense)
+    GAME_OVER: 2,              // One-shot, ~5 seconds
+    VICTORY: 1,                // One-shot, ~3 seconds
+  },
+
+  // Oscillator types for authentic 8-bit sound
+  VOICES: {
+    LEAD: 'square',            // Classic chiptune lead
+    BASS: 'triangle',          // Deep bass (NES style)
+    HARMONY: 'square',         // Supporting melody
+    NOISE: 'noise',            // Percussion/hi-hats
+  },
+
+  // Musical scales (frequencies in Hz)
+  NOTES: {
+    // Octave 3
+    C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
+    // Octave 4
+    C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+    // Octave 5
+    C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, B5: 987.77,
+    // Octave 6
+    C6: 1046.50,
+    // Rest (silence)
+    REST: 0,
+  },
+
+  // Boss wave threshold for switching to boss theme
+  BOSS_WAVE_THRESHOLD: 10,
+};
+

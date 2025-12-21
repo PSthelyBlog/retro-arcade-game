@@ -31,6 +31,7 @@ npm run dev
 - 🎨 **Retro Graphics**: Pixel-art style with CRT scanline effect
 - 🌟 **Parallax Starfield**: 3-layer scrolling background with depth effect
 - 🔊 **8-Bit Audio**: Synthesized sound effects using Web Audio API
+- 🎵 **Chiptune Music**: 5 unique background tracks (title, battle, boss, victory, game over)
 - 📳 **Haptic Feedback**: Controller vibration on shoot and hit events
 
 ### Technical
@@ -171,6 +172,26 @@ Enemies have a 15% chance to drop power-ups when destroyed. Mystery ships have a
 - Power-ups blink when about to expire (last 2 seconds)
 - Timed effects stack: collecting another resets the timer
 
+### Background Music 🎵
+
+Fully synthesized chiptune music plays throughout the game, with different tracks for each game state:
+
+| Track | BPM | When It Plays |
+|-------|-----|---------------|
+| 🎬 **Title** | 100 | Menu/start screen - mysterious, inviting |
+| ⚔️ **Battle** | 140 | During gameplay - intense, driving |
+| 👹 **Boss** | 160 | Endless mode wave 10+ - urgent, dramatic |
+| 🎉 **Victory** | 120 | Level complete - triumphant fanfare |
+| 💀 **Game Over** | 80 | On defeat - somber, reflective |
+
+**Features:**
+- 100% synthesized using Web Audio API (no audio files needed)
+- Seamless looping without gaps
+- Smooth crossfade transitions between tracks (500ms)
+- Independent from SFX mute (M key mutes both)
+- Automatically pauses when game is paused
+- Multi-voice synthesis (square, triangle, sawtooth waves)
+
 ## 🏗️ Project Structure
 
 ```
@@ -192,7 +213,9 @@ retro-arcade-game/
 │   ├── entities/                # Game objects
 │   ├── managers/                # Systems
 │   ├── renderer/                # Drawing
-│   ├── audio/                   # Sound
+│   ├── audio/                   # Sound & Music
+│   │   ├── sound-manager.js     # Sound effects
+│   │   └── music-manager.js     # Background music
 │   └── utils/                   # Helpers
 ├── tests/                       # Unit tests
 ├── assets/                      # Sprites & sounds
@@ -381,11 +404,12 @@ See [Game Modes](#-game-modes) for details on how to use these features.
 |---------|--------|-------------|
 | **Power-ups System** | ✅ Done | Shield, rapid fire, multi-shot, bomb, extra life - dropped by enemies |
 | **Touch Controls** | ✅ Done | On-screen virtual buttons for mobile play with haptic feedback |
-| **Background Music** | ⬜ Todo | Looping chiptune background track |
+| **Background Music** | ✅ Done | 5 chiptune tracks (title, battle, boss, victory, game over) |
 | **Combo System** | ⬜ Todo | Bonus points for destroying enemies in quick succession |
 | **Wave/Formation Patterns** | ⬜ Todo | Different enemy formations per level (V-shape, diamond, spiral) |
 
-See [Touch (Mobile)](#touch-mobile-) controls for details on how to use touch controls.
+See [Touch (Mobile)](#touch-mobile-) controls for details on touch controls.
+See [Background Music](#background-music-) for details on the music system.
 
 ### Phase 3: Visual & Audio Polish (4+ hours each)
 
