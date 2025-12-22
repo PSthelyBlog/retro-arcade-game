@@ -224,6 +224,67 @@ export const COMBO = {
   },
 };
 
+/**
+ * Enemy formation patterns configuration
+ * Defines how enemies are arranged and enter the game board
+ */
+export const FORMATIONS = {
+  // Formation types with level mappings
+  TYPES: {
+    CLASSIC: 'classic',
+    V_SHAPE: 'vshape',
+    DIAMOND: 'diamond',
+    SPIRAL: 'spiral',
+    CROSS: 'cross',
+    RANDOM: 'random',
+  },
+
+  // Level to formation mapping (levels 1-10, then cycles)
+  LEVEL_PATTERNS: {
+    1: 'classic', 2: 'classic',
+    3: 'vshape', 4: 'vshape',
+    5: 'diamond', 6: 'diamond',
+    7: 'spiral', 8: 'spiral',
+    9: 'cross', 10: 'cross',
+    default: 'random',  // Level 11+
+  },
+
+  // Entrance animation settings
+  ENTRANCE: {
+    DURATION: 2000,        // Total animation time (ms)
+    DELAY_PER_ENEMY: 30,   // Stagger delay between enemies (ms)
+    EASING: 'easeOutQuad', // Animation easing function name
+    START_Y: -50,          // Start above screen
+    OVERSHOOT: 10,         // Pixels to overshoot then settle back
+  },
+
+  // Display names for UI
+  DISPLAY_NAMES: {
+    classic: 'CLASSIC',
+    vshape: 'V-FORMATION',
+    diamond: 'DIAMOND',
+    spiral: 'SPIRAL',
+    cross: 'CROSS',
+    random: 'CHAOS',
+  },
+
+  // Colors for formation announcements
+  COLORS: {
+    classic: '#00FF00',
+    vshape: '#FF6600',
+    diamond: '#00FFFF',
+    spiral: '#FF00FF',
+    cross: '#FFFF00',
+    random: '#FF0000',
+  },
+
+  // Scaling for endless mode (more enemies in later waves)
+  ENDLESS_SCALING: {
+    EXTRA_ROWS_PER_5_WAVES: 1,  // Add 1 row every 5 waves
+    MAX_EXTRA_ROWS: 3,          // Cap at 3 extra rows
+  },
+};
+
 export const Keys = {
   LEFT: ['ArrowLeft', 'KeyA'],
   RIGHT: ['ArrowRight', 'KeyD'],

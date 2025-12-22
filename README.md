@@ -25,6 +25,7 @@ npm run dev
 - ♾️ **Endless Mode**: Infinite waves with progressive difficulty scaling
 - ⚡ **Power-ups**: Collect shields, rapid fire, multi-shot, bombs, and extra lives
 - 🔥 **Combo System**: Chain kills for score multipliers up to 3x
+- 🎭 **Wave Formations**: 6 unique enemy patterns (Classic, V-Shape, Diamond, Spiral, Cross, Random)
 - 🏆 **Leaderboard**: Top 10 high scores with classic 3-letter initials entry
 - 🎮 **Controller Support**: Full gamepad support (Xbox, PlayStation, Nintendo, generic)
 
@@ -217,6 +218,31 @@ Build combos by destroying enemies in quick succession for bonus score multiplie
 - Multi-shot power-up makes combos easier to build
 - Higher combos mean exponentially more points!
 
+### Wave Formations 🎭
+
+Each level features a unique enemy formation that determines their starting positions:
+
+| Formation | Levels | Shape | Description |
+|-----------|--------|-------|-------------|
+| **Classic** | 1-2 | ▭ | Standard 5×11 rectangular grid - the original Space Invaders layout |
+| **V-Shape** | 3-4 | ∨ | Inverted V pointing downward - enemies spread wide at top |
+| **Diamond** | 5-6 | ◇ | Rhombus shape - concentrated in the center |
+| **Spiral** | 7-8 | ☀ | Enemies spiral outward from center - creates a galaxy effect |
+| **Cross** | 9-10 | ✚ | Plus sign pattern - vulnerable in the corners |
+| **Random** | 11+ | ⁂ | Chaotic scattered formation - unpredictable positions |
+
+**Features:**
+- **Entrance Animation**: Enemies fly in from above with smooth easeOutQuad easing
+- **Staggered Arrival**: 30ms delay between each enemy for wave-like entrance effect
+- **Formation Announcement**: Large text overlay (e.g., "V-SHAPE FORMATION") fades in at wave start
+- **Progress Indicator**: "INCOMING..." bar at bottom during entrance animation
+- **Level Preview**: Next formation type shown on level complete screen
+
+**Endless Mode:**
+- Formations cycle every 10 waves (Wave 11 = Classic again, Wave 13 = V-Shape, etc.)
+- Extra enemy rows added every 5 waves (up to +3 rows)
+- Formations progressively get more challenging with speed scaling
+
 ## 🏗️ Project Structure
 
 ```
@@ -236,7 +262,7 @@ retro-arcade-game/
 │   ├── game.js                  # Main game loop
 │   ├── constants.js             # Configuration
 │   ├── entities/                # Game objects
-│   ├── managers/                # Systems
+│   ├── managers/                # Systems (score, input, enemy, formation-generator, combo, popup)
 │   ├── renderer/                # Drawing
 │   ├── audio/                   # Sound & Music
 │   │   ├── sound-manager.js     # Sound effects
@@ -423,7 +449,9 @@ All Phase 1 features have been implemented!
 
 See [Game Modes](#-game-modes) for details on how to use these features.
 
-### Phase 2: Gameplay Enhancements (3-4 hours each) — IN PROGRESS
+### ✅ Phase 2: Gameplay Enhancements — COMPLETE
+
+All Phase 2 features have been implemented!
 
 | Feature | Status | Description |
 |---------|--------|-------------|
@@ -431,11 +459,12 @@ See [Game Modes](#-game-modes) for details on how to use these features.
 | **Touch Controls** | ✅ Done | On-screen virtual buttons for mobile play with haptic feedback |
 | **Background Music** | ✅ Done | 5 chiptune tracks (title, battle, boss, victory, game over) |
 | **Combo System** | ✅ Done | Chain kills for ×1.5 to ×3.0 score multipliers |
-| **Wave/Formation Patterns** | ⬜ Todo | Different enemy formations per level (V-shape, diamond, spiral) |
+| **Wave/Formation Patterns** | ✅ Done | 6 unique patterns (Classic, V-Shape, Diamond, Spiral, Cross, Random) |
 
 See [Touch (Mobile)](#touch-mobile-) controls for details on touch controls.
 See [Background Music](#background-music-) for details on the music system.
 See [Combo System](#combo-system-) for details on combo mechanics.
+See [Wave Formations](#wave-formations-) for details on enemy formation patterns.
 
 ### Phase 3: Visual & Audio Polish (4+ hours each)
 

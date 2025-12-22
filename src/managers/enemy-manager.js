@@ -1,5 +1,6 @@
 import { Enemy } from '../entities/enemy.js';
-import { ENEMY, GAME } from '../constants.js';
+import { ENEMY, GAME, FORMATIONS } from '../constants.js';
+import { FormationGenerator } from './formation-generator.js';
 
 /**
  * Manages enemy formation and movement
@@ -16,6 +17,13 @@ export class EnemyManager {
     this.wave = 1;
     this.gameMode = 'classic'; // 'classic' or 'endless'
     this.difficultyMultiplier = 1.0;
+
+    // Formation properties
+    this.currentFormationType = 'classic';
+    this.entranceActive = false;
+    this.entranceStartTime = 0;
+    this.entrancePositions = [];
+    this.entranceProgress = 0;
   }
 
   /**
@@ -36,8 +44,10 @@ export class EnemyManager {
 
   /**
    * Create initial enemy formation
+   * @param {number} level - Current level (used for formation type)
+   * @param {boolean} withEntrance - Whether to play entrance animation
    */
-  createFormation() {
+  createFormation(level = 1, withEntrance = true) {
     this.enemies = [];
     this.direction = 1;
     this.dropNext = false;
@@ -52,15 +62,142 @@ export class EnemyManager {
       this.speed = ENEMY.BASE_SPEED;
     }
 
-    for (let row = 0; row < ENEMY.ROWS; row++) {
-      for (let col = 0; col < ENEMY.COLS; col++) {
-        const x = ENEMY.START_X + col * ENEMY.HORIZONTAL_SPACING;
-        const y = ENEMY.START_Y + row * ENEMY.VERTICAL_SPACING;
-        this.enemies.push(new Enemy(x, y, row, col));
-      }
+    // Get formation type based on level
+    this.currentFormationType = FormationGenerator.getFormationType(level);
+
+    // Calculate extra rows for endless mode scaling
+    let extraRows = 0;
+    if (this.gameMode === 'endless') {
+      const wavesForExtraRow = 5;
+      extraRows = Math.min(
+        Math.floor((this.wave - 1) / wavesForExtraRow),
+        FORMATIONS.ENDLESS_SCALING.MAX_EXTRA_ROWS
+      );
+    }
+
+    // Generate formation positions
+    this.entrancePositions = FormationGenerator.generate(this.currentFormationType, extraRows);
+
+    // Create enemies at starting positions (off-screen if entrance animation)
+    for (const pos of this.entrancePositions) {
+      const startY = withEntrance ? FORMATIONS.ENTRANCE.START_Y : pos.y;
+      const enemy = new Enemy(pos.x, startY, pos.row, pos.col);
+      enemy.targetX = pos.x;
+      enemy.targetY = pos.y;
+      enemy.entranceDelay = pos.delay;
+      enemy.entranceComplete = !withEntrance;
+      this.enemies.push(enemy);
+    }
+
+    // Start entrance animation if enabled
+    if (withEntrance) {
+      this.entranceActive = true;
+      this.entranceStartTime = Date.now();
+      this.entranceProgress = 0;
+    } else {
+      this.entranceActive = false;
+      this.entranceProgress = 1;
     }
 
     this.totalEnemies = this.enemies.length;
+  }
+
+  /**
+   * Get current formation type
+   * @returns {string} Formation type
+   */
+  getFormationType() {
+    return this.currentFormationType;
+  }
+
+  /**
+   * Get formation display name
+   * @returns {string} Display name
+   */
+  getFormationDisplayName() {
+    return FormationGenerator.getDisplayName(this.currentFormationType);
+  }
+
+  /**
+   * Get formation color
+   * @returns {string} Hex color
+   */
+  getFormationColor() {
+    return FormationGenerator.getColor(this.currentFormationType);
+  }
+
+  /**
+   * Check if entrance animation is playing
+   * @returns {boolean}
+   */
+  isEntranceActive() {
+    return this.entranceActive;
+  }
+
+  /**
+   * Get entrance animation progress (0-1)
+   * @returns {number}
+   */
+  getEntranceProgress() {
+    return this.entranceProgress;
+  }
+
+  /**
+   * Update entrance animation
+   * @param {number} deltaTime - Time since last update
+   */
+  updateEntrance(deltaTime) {
+    if (!this.entranceActive) return;
+
+    const elapsed = Date.now() - this.entranceStartTime;
+    this.entranceProgress = Math.min(elapsed / FORMATIONS.ENTRANCE.DURATION, 1);
+
+    let allComplete = true;
+
+    for (const enemy of this.enemies) {
+      if (enemy.entranceComplete) continue;
+
+      // Check if this enemy should start moving (based on delay)
+      if (elapsed < enemy.entranceDelay) {
+        allComplete = false;
+        continue;
+      }
+
+      // Calculate individual enemy progress
+      const enemyElapsed = elapsed - enemy.entranceDelay;
+      const enemyDuration = FORMATIONS.ENTRANCE.DURATION - enemy.entranceDelay;
+      const progress = Math.min(enemyElapsed / enemyDuration, 1);
+
+      // Easing: easeOutQuad with overshoot
+      const eased = this.easeOutQuad(progress);
+      const overshoot = progress < 0.8 ? 0 : Math.sin((progress - 0.8) * Math.PI * 2.5) * FORMATIONS.ENTRANCE.OVERSHOOT * (1 - progress);
+
+      // Interpolate position
+      const startY = FORMATIONS.ENTRANCE.START_Y;
+      enemy.y = startY + (enemy.targetY - startY) * eased + overshoot;
+      enemy.x = enemy.targetX;
+
+      if (progress >= 1) {
+        enemy.y = enemy.targetY;
+        enemy.entranceComplete = true;
+      } else {
+        allComplete = false;
+      }
+    }
+
+    if (allComplete) {
+      this.entranceActive = false;
+      this.entranceProgress = 1;
+    }
+  }
+
+  /**
+   * Easing function: easeOutQuad
+   * @param {number} t - Progress (0-1)
+   * @returns {number} Eased value
+   */
+  easeOutQuad(t) {
+    return t * (2 - t);
   }
 
   /**
@@ -136,6 +273,13 @@ export class EnemyManager {
    */
   update(deltaTime) {
     const projectiles = [];
+
+    // Update entrance animation if active
+    if (this.entranceActive) {
+      this.updateEntrance(deltaTime);
+      return projectiles; // Don't process normal movement during entrance
+    }
+
     const active = this.getActiveEnemies();
 
     if (active.length === 0) return projectiles;
