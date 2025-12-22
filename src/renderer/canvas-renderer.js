@@ -207,8 +207,9 @@ export class CanvasRenderer {
   /**
    * Draw level complete screen
    * @param {number} level
+   * @param {string} [nextFormationType] - Optional next formation type to display
    */
-  drawLevelComplete(level) {
+  drawLevelComplete(level, nextFormationType = null) {
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     this.ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
 
@@ -220,6 +221,13 @@ export class CanvasRenderer {
     this.ctx.fillStyle = UI.TEXT_COLOR;
     this.ctx.font = `16px ${UI.FONT_FAMILY}`;
     this.ctx.fillText('GET READY...', GAME.WIDTH / 2, GAME.HEIGHT / 2 + 50);
+
+    // Show next formation if provided
+    if (nextFormationType) {
+      this.ctx.fillStyle = '#FFD700';
+      this.ctx.font = `14px ${UI.FONT_FAMILY}`;
+      this.ctx.fillText(`NEXT: ${nextFormationType}`, GAME.WIDTH / 2, GAME.HEIGHT - 40);
+    }
 
     this.ctx.textAlign = 'left';
   }
@@ -1133,6 +1141,78 @@ export class CanvasRenderer {
 
     // Ensure globalAlpha is reset
     this.ctx.globalAlpha = 1.0;
+  }
+
+  /**
+   * Draw formation announcement with animated entrance
+   * Shows "FORMATION: V-FORMATION" with fade in and scale up effects
+   * @param {string} formationType - Formation type identifier
+   * @param {string} formationName - Display name of the formation
+   * @param {string} formationColor - Color for the formation text
+   * @param {number} progress - Animation progress (0-1)
+   */
+  drawFormationAnnouncement(formationType, formationName, formationColor, progress) {
+    this.ctx.save();
+
+    // Semi-transparent dark background
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.fillRect(0, 0, GAME.WIDTH, GAME.HEIGHT);
+
+    // Calculate animation values
+    const scale = 0.5 + (progress * 0.5); // Scales from 0.5 to 1.0
+    const opacity = progress; // Fades from 0 to 1.0
+
+    // Set up text with animation
+    this.ctx.globalAlpha = opacity;
+    this.ctx.fillStyle = formationColor;
+    this.ctx.font = `48px ${UI.FONT_FAMILY}`;
+    this.ctx.textAlign = 'center';
+
+    // Apply scale transformation centered on canvas center
+    this.ctx.translate(GAME.WIDTH / 2, GAME.HEIGHT / 2);
+    this.ctx.scale(scale, scale);
+
+    // Draw formation announcement text
+    const text = `FORMATION: ${formationName}`;
+    this.ctx.fillText(text, 0, 0);
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Draw entrance progress bar with "INCOMING..." text
+   * Shows progress during enemy entrance animation
+   * @param {number} progress - Progress (0-1) for entrance animation
+   * @param {string} formationType - Formation type for color matching
+   * @param {string} [formationColor='#00FF00'] - Optional color override
+   */
+  drawEntranceProgress(progress, formationType, formationColor = '#00FF00') {
+    const barWidth = 200;
+    const barHeight = 10;
+    const barX = (GAME.WIDTH - barWidth) / 2;
+    const barY = GAME.HEIGHT - 80;
+
+    // Draw "INCOMING..." text above bar
+    this.ctx.fillStyle = formationColor;
+    this.ctx.font = `16px ${UI.FONT_FAMILY}`;
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('INCOMING...', GAME.WIDTH / 2, barY - 20);
+
+    // Draw background bar
+    this.ctx.fillStyle = '#333333';
+    this.ctx.fillRect(barX, barY, barWidth, barHeight);
+
+    // Draw progress fill
+    const fillWidth = barWidth * Math.min(progress, 1);
+    this.ctx.fillStyle = formationColor;
+    this.ctx.fillRect(barX, barY, fillWidth, barHeight);
+
+    // Draw bar border
+    this.ctx.strokeStyle = formationColor;
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+    this.ctx.textAlign = 'left';
   }
 
   /**

@@ -215,12 +215,26 @@ export class Game {
    * @param {number} deltaTime
    */
   updatePlaying(deltaTime) {
+    // Update formation announcement timer
+    if (this.showFormationAnnouncement) {
+      this.formationAnnouncementTimer += deltaTime;
+      if (this.formationAnnouncementTimer >= 2000) {
+        this.showFormationAnnouncement = false;
+      }
+    }
+
     // Pause toggle
     if (this.input.isPauseJustPressed()) {
       this.state = GameState.PAUSED;
       if (this.musicManager) {
         this.musicManager.pause();
       }
+      return;
+    }
+
+    // During entrance animation, only allow pause but no player actions
+    if (this.enemyManager.isEntranceActive()) {
+      this.enemyManager.update(deltaTime); // Update entrance animation
       return;
     }
 
@@ -682,9 +696,11 @@ export class Game {
 
     this.player = new Player();
     this.createBunkers();
-    this.enemyManager.createFormation();
+    this.enemyManager.createFormation(this.level, true); // Pass level for formation type, enable entrance animation
 
     this.state = GameState.PLAYING;
+    this.formationAnnouncementTimer = 0;
+    this.showFormationAnnouncement = true;
     this.soundManager.resume();
 
     // Start battle music when game begins
@@ -711,8 +727,10 @@ export class Game {
       this.createBunkers();
     }
 
-    this.enemyManager.createFormation();
+    this.enemyManager.createFormation(this.level, true); // Pass level for formation type
     this.state = GameState.PLAYING;
+    this.formationAnnouncementTimer = 0;
+    this.showFormationAnnouncement = true;
 
     // Resume battle music after level complete
     if (this.musicManager) {
@@ -742,8 +760,12 @@ export class Game {
       this.createBunkers();
     }
 
-    this.enemyManager.createFormation();
+    // In endless mode, use wave number to determine formation type (cycles every 10 waves)
+    const formationLevel = ((this.wave - 1) % 10) + 1;
+    this.enemyManager.createFormation(formationLevel, true);
     this.state = GameState.PLAYING;
+    this.formationAnnouncementTimer = 0;
+    this.showFormationAnnouncement = true;
 
     // Resume appropriate music after wave complete (battle or boss based on wave)
     if (this.musicManager) {
@@ -894,9 +916,17 @@ export class Game {
         } else if (this.state === GameState.LEVEL_COMPLETE) {
           if (this.gameMode === GameMode.ENDLESS) {
             const speedMultiplier = this.enemyManager.getDifficultyMultiplier();
-            this.renderer.drawWaveComplete(this.wave, speedMultiplier);
+            // Preview next formation in endless mode
+            const nextFormationLevel = (this.wave % 10) + 1;
+            const nextFormationType = this.enemyManager.getFormationType();
+            this.renderer.drawWaveComplete(this.wave, speedMultiplier, nextFormationType);
           } else {
-            this.renderer.drawLevelComplete(this.level);
+            // Preview next formation in classic mode
+            const nextLevel = this.level + 1;
+            const nextFormationType = nextLevel <= 10 ?
+              ['classic', 'classic', 'vshape', 'vshape', 'diamond', 'diamond', 'spiral', 'spiral', 'cross', 'cross'][nextLevel - 1] :
+              'random';
+            this.renderer.drawLevelComplete(this.level, nextFormationType);
           }
         }
         break;
@@ -1008,6 +1038,23 @@ export class Game {
 
     // Draw combo popups
     this.renderer.drawPopups(this.popupManager.getPopups());
+
+    // Draw formation announcement overlay during entrance
+    if (this.showFormationAnnouncement) {
+      const progress = Math.min(this.formationAnnouncementTimer / 1500, 1); // Fade out over 1.5s
+      const formationType = this.enemyManager.getFormationType();
+      const formationName = this.enemyManager.getFormationDisplayName();
+      const formationColor = this.enemyManager.getFormationColor();
+      this.renderer.drawFormationAnnouncement(formationType, formationName, formationColor, progress);
+    }
+
+    // Draw entrance progress bar if enemies are flying in
+    if (this.enemyManager.isEntranceActive()) {
+      const entranceProgress = this.enemyManager.getEntranceProgress();
+      const formationType = this.enemyManager.getFormationType();
+      const formationColor = this.enemyManager.getFormationColor();
+      this.renderer.drawEntranceProgress(entranceProgress, formationType, formationColor);
+    }
 
     // Draw touch controls overlay (on touch devices)
     this.drawTouchControls(ctx);
