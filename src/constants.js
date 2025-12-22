@@ -144,7 +144,7 @@ export const STARFIELD = {
 export const POWERUPS = {
   FALL_SPEED: 1.5,           // Pixels per frame
   SIZE: 24,                   // Power-up size in pixels
-  DROP_CHANCE: 0.15,          // 15% chance to drop on enemy kill
+  DROP_CHANCE: 0.085,          // 15% chance to drop on enemy kill
   EXPIRE_TIME: 10000,         // Time before uncollected power-up disappears (ms)
   PULSE_SPEED: 0.1,           // Animation pulse speed
 
@@ -160,7 +160,7 @@ export const POWERUPS = {
       name: 'RAPID_FIRE',
       color: '#FF6600',        // Orange
       dropWeight: 10,          // 10% relative weight
-      duration: 10000,         // 10 seconds
+      duration: 8000,         // 8 seconds
       fireRateMultiplier: 0.5, // 50% reduction in fire cooldown
       description: 'Faster shooting',
     },
@@ -168,7 +168,7 @@ export const POWERUPS = {
       name: 'MULTI_SHOT',
       color: '#FF00FF',        // Magenta
       dropWeight: 8,           // 8% relative weight
-      duration: 8000,          // 8 seconds
+      duration: 5000,          // 5 seconds
       projectileCount: 3,      // Number of projectiles
       spreadAngle: 15,         // Degrees between projectiles
       description: 'Triple spread shot',
