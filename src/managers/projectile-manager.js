@@ -7,7 +7,7 @@ export class ProjectileManager {
   constructor() {
     this.playerProjectiles = [];
     this.enemyProjectiles = [];
-    this.maxPlayerProjectiles = 3; // Limit simultaneous player shots
+    this.maxPlayerProjectiles = 10; // Limit simultaneous player shots
   }
 
   /**
