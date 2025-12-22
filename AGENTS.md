@@ -7,12 +7,22 @@
 
 **Retro Arcade Game** is a browser-based Space Invaders clone built with vanilla JavaScript and HTML5 Canvas. The project demonstrates the lead/worker pattern for AI-assisted development using goose with Claude Code.
 
+### Current Status
+
+| Phase | Status | Features |
+|-------|--------|----------|
+| **Phase 1: Quick Wins** | ✅ Complete | Name entry, starfield, endless mode |
+| **Phase 2: Gameplay** | ✅ Complete | Power-ups, touch controls, music, combos, formations |
+| **Phase 3** | Pending | Visual & audio polish |
+| **Phase 4** | Pending | New game modes |
+
 ### Tech Stack
 - **Language**: JavaScript (ES6+)
 - **Rendering**: HTML5 Canvas API
+- **Audio**: Web Audio API (no external audio files)
 - **Build**: Vite
-- **Testing**: Vitest
-- **Linting**: ESLint
+- **Testing**: Vitest + jsdom
+- **Deployment**: GitHub Pages (GitHub Actions)
 - **Style**: Retro pixel-art aesthetic
 
 ### Architecture
@@ -24,16 +34,27 @@
 │  index.html                                                  │
 │     └── main.js (entry point)                               │
 │            └── Game class (orchestrator)                    │
-│                   ├── Renderer (canvas drawing)             │
-│                   ├── InputHandler (keyboard events)        │
-│                   ├── Player (ship entity)                  │
-│                   ├── EnemyManager (alien formations)       │
-│                   ├── ProjectileManager (bullets)           │
+│                   ├── CanvasRenderer                        │
+│                   │   ├── TouchControlsRenderer             │
+│                   │   └── Starfield                         │
+│                   ├── InputHandler                          │
+│                   │   └── TouchControlManager               │
+│                   ├── Player (with shield, power-ups)       │
+│                   ├── EnemyManager                          │
+│                   │   └── FormationGenerator                │
+│                   ├── ProjectileManager                     │
+│                   ├── PowerUpManager                        │
+│                   ├── ComboManager + PopupManager           │
 │                   ├── CollisionDetector                     │
-│                   ├── ScoreManager                          │
-│                   └── SoundManager (8-bit audio)            │
+│                   ├── ScoreManager + NameEntryManager       │
+│                   ├── SoundManager (8-bit effects)          │
+│                   └── MusicManager (chiptune tracks)        │
+│                       ├── PulseOscillator                   │
+│                       └── Arpeggiator                       │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ## Lead/Worker Pattern
 
@@ -41,258 +62,312 @@ This project is designed for the **lead/worker multi-agent pattern** — an AI d
 
 ### Why Lead/Worker?
 
-| Benefit | Description |
-|---------|-------------|
-| **Parallelization** | Multiple tasks execute simultaneously |
-| **Specialization** | Workers focus on specific domains (rendering, tests, etc.) |
-| **Quality** | Lead reviews and integrates worker outputs |
-| **Efficiency** | 90%+ performance improvement on complex tasks |
+| Benefit | Description | Evidence from This Project |
+|---------|-------------|----------------------------|
+| **Parallelization** | Multiple tasks execute simultaneously | Implemented 4-5 workers in parallel per feature |
+| **Specialization** | Workers focus on specific domains | Separate workers for constants, managers, renderer, tests |
+| **Quality** | Lead reviews and integrates worker outputs | Lead fixes integration issues, resolves conflicts |
+| **Efficiency** | 90%+ performance improvement | Complex features like power-ups completed in single sessions |
 
 ### Agent Hierarchy
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     LEAD AGENT (Opus 4)                     │
-│  Orchestrates, plans, reviews, integrates                   │
+│  Orchestrates, plans, reviews, integrates, fixes bugs       │
 └───────────────────────┬─────────────────────────────────────┘
                         │
-        ┌───────────────┼───────────────┐
-        │               │               │
-        ▼               ▼               ▼
-┌───────────────┐ ┌───────────────┐ ┌───────────────┐
-│ Worker Agent  │ │ Worker Agent  │ │ Worker Agent  │
-│ (Haiku/Sonnet)│ │ (Haiku/Sonnet)│ │ (Haiku/Sonnet)│
-│ game-engine   │ │ renderer      │ │ test-writer   │
-└───────────────┘ └───────────────┘ └───────────────┘
+        ┌───────────────┼───────────────┐───────────────┐
+        │               │               │               │
+        ▼               ▼               ▼               ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+│ Worker Agent  │ │ Worker Agent  │ │ Worker Agent  │ │ Worker Agent  │
+│ (Haiku)       │ │ (Haiku)       │ │ (Haiku)       │ │ (Haiku)       │
+│ constants     │ │ managers      │ │ renderer      │ │ test-writer   │
+└───────────────┘ └───────────────┘ └───────────────┘ └───────────────┘
+       │                 │                 │                 │
+       └────────────────────────PARALLEL────────────────────┘
 ```
 
 ### Lead Agent Responsibilities (Opus 4)
 
-1. **Task Decomposition**: Break features into parallelizable subtasks
-2. **Worker Assignment**: Delegate subtasks to appropriate specialized workers
-3. **Context Provision**: Provide workers with necessary file context and instructions
-4. **Integration**: Combine worker outputs into cohesive implementation
-5. **Quality Assurance**: Review, test, and verify combined output
+Based on our experience implementing 8 features:
 
-### Worker Agents (Haiku 4 / Sonnet 4)
+1. **Task Decomposition**: Break features into 4-8 parallelizable subtasks
+2. **Worker Assignment**: Spawn workers with clear, focused prompts
+3. **Context Provision**: Provide workers with necessary file paths and constants references
+4. **Integration**: The lead handles Game.js integration (the coordination point)
+5. **Bug Fixing**: Workers may produce code with minor issues; lead fixes them
+6. **Test Running**: Run `npm test` and `npm run build` after worker outputs
 
-| Agent | Location | Specialization |
-|-------|----------|----------------|
-| `game-engine` | `.claude/agents/game-engine.md` | Game loop, physics, state management |
-| `renderer` | `.claude/agents/renderer.md` | Canvas drawing, animations, effects |
-| `entity` | `.claude/agents/entity.md` | Player, enemies, projectiles |
-| `audio` | `.claude/agents/audio.md` | Web Audio API, sound synthesis |
-| `test-writer` | `.claude/agents/test-writer.md` | Unit tests, integration tests |
-| `docs-writer` | `.claude/agents/docs-writer.md` | README, API docs, comments |
-| `controller` | `.claude/agents/controller.md` | Gamepad/controller support |
+### Worker Agents (Haiku 4)
+
+| Agent | Location | Specialization | Real Examples |
+|-------|----------|----------------|---------------|
+| `game-engine` | `.claude/agents/game-engine.md` | Game loop, managers, state | ComboManager, PowerUpManager |
+| `renderer` | `.claude/agents/renderer.md` | Canvas drawing, HUD, effects | drawComboHUD, drawFormationAnnouncement |
+| `entity` | `.claude/agents/entity.md` | Player, enemies, projectiles | PowerUp class, multi-shot projectiles |
+| `audio` | `.claude/agents/audio.md` | Web Audio API, sound synthesis | MusicManager, PulseOscillator, Arpeggiator |
+| `test-writer` | `.claude/agents/test-writer.md` | Unit tests, integration tests | 771+ tests across all features |
+| `docs-writer` | `.claude/agents/docs-writer.md` | README, API docs, comments | README updates per feature |
+| `controller` | `.claude/agents/controller.md` | Gamepad/controller support | Haptic feedback, button mappings |
+| `touch-controls` | `.claude/agents/touch-controls.md` | Mobile touch input | TouchControlManager, virtual D-pad |
 
 ---
 
 ## How to Use Lead/Worker Pattern
 
-### Step 1: Analyze the Task
+### Real-World Workflow (from implementing this project)
 
-When receiving a feature request (e.g., GitHub Issue), the lead agent should:
+#### Step 1: Analyze the GitHub Issue
+
+When receiving a feature request, the lead agent should:
 
 ```markdown
-1. Read the issue requirements
-2. Identify which worker specializations are needed
-3. Break the task into parallelizable subtasks
-4. Determine dependencies between subtasks
+1. Read the issue requirements thoroughly
+2. Read relevant source files to understand current architecture
+3. Identify which worker specializations are needed
+4. Break the task into 4-8 parallelizable subtasks
+5. Identify dependencies (tests come AFTER implementation)
 ```
 
-### Step 2: Decompose into Subtasks
+#### Step 2: Create a Todo List
 
-**Example**: Issue #1 "Add name entry for high scores"
+**Example** from Issue #7 (Power-ups System):
 
-| Subtask | Worker Agent | Dependencies |
-|---------|--------------|--------------|
-| NameEntryManager class | `game-engine` | None |
-| drawNameEntry() method | `renderer` | None |
-| Input key detection | `game-engine` | None |
-| Unit tests | `test-writer` | After implementation |
-| Update documentation | `docs-writer` | After implementation |
+```markdown
+Todo List:
+1. [in_progress] Add POWERUPS constants to constants.js
+2. [pending] Create PowerUp entity class
+3. [pending] Create PowerUpManager class
+4. [pending] Update Player for power-up effects
+5. [pending] Add collision detection for power-ups
+6. [pending] Update SoundManager with power-up sounds
+7. [pending] Update CanvasRenderer for power-up HUD
+8. [pending] Integrate into Game.js (LEAD TASK)
+9. [pending] Write unit tests (AFTER 1-8)
+```
 
-### Step 3: Launch Workers in Parallel
+#### Step 3: Launch Workers in Parallel
 
-Use the `Task` tool with `subagent_type="general-purpose"` to spawn workers:
+**Key Insight**: Launch 3-4 workers in a SINGLE message for independent tasks:
 
 ```javascript
-// Lead agent spawns multiple workers in a SINGLE message
-// (parallel execution for independent tasks)
-
-Task(
-  subagent_type="general-purpose",
-  model="haiku",  // Use cost-efficient model for focused tasks
-  prompt=`
-    You are the game-engine worker agent.
-    Read .claude/agents/game-engine.md for your role instructions.
-
-    TASK: Implement NameEntryManager class
-
-    Files to read first:
-    - src/constants.js (for NAME_ENTRY config)
-    - src/managers/score-manager.js (for integration)
-
-    Requirements:
-    - Create src/managers/name-entry-manager.js
-    - Support 3-character initials (A-Z, 0-9)
-    - Handle cursor position (0, 1, 2)
-    - Cycle characters with up/down
-    - Confirm with Enter or Space
-
-    Write the file when ready.
-  `
-)
-
+// From Issue #7 (Power-ups) - Workers 1-4 ran in parallel
 Task(
   subagent_type="general-purpose",
   model="haiku",
   prompt=`
-    You are the renderer worker agent.
-    Read .claude/agents/renderer.md for your role instructions.
+    You are the game-engine worker agent.
 
-    TASK: Add drawNameEntry() method to CanvasRenderer
+    TASK: Add POWERUPS constants to src/constants.js
 
-    Files to read first:
-    - src/renderer/canvas-renderer.js (existing methods)
-    - src/constants.js (COLORS, GAME dimensions)
+    FILES TO READ FIRST:
+    - src/constants.js (see existing patterns like PLAYER, ENEMY)
 
-    Requirements:
-    - Display "ENTER YOUR INITIALS" title
-    - Show 3 character slots with current letters
-    - Blinking cursor on active slot
-    - Retro pixel font styling
+    REQUIREMENTS:
+    Add export const POWERUPS = {
+      TYPES: { SHIELD, RAPID_FIRE, MULTI_SHOT, BOMB, EXTRA_LIFE },
+      DROP_CHANCE: { ENEMY: 0.15, MYSTERY_SHIP: 0.5 },
+      DURATION: { RAPID_FIRE: 10000, MULTI_SHOT: 8000 },
+      VISUAL: { size, colors, pulse speed },
+      WEIGHTS: { probability for each type }
+    };
 
-    Edit the file when ready.
+    Edit the file directly.
+  `
+)
+
+// Parallel with above
+Task(
+  subagent_type="general-purpose",
+  model="haiku",
+  prompt=`
+    You are the entity worker agent.
+
+    TASK: Create PowerUp entity class
+
+    FILES TO READ FIRST:
+    - src/entities/projectile.js (similar entity pattern)
+    - src/entities/mystery-ship.js (for visual reference)
+
+    REQUIREMENTS:
+    - Create src/entities/power-up.js
+    - Properties: type, x, y, speed (falls down)
+    - Visual: pulsing glow, type-specific colors
+    - getBounds() for collision detection
+
+    Write the new file.
+  `
+)
+
+// Parallel with above
+Task(
+  subagent_type="general-purpose",
+  model="haiku",
+  prompt=`
+    You are the game-engine worker agent.
+
+    TASK: Create PowerUpManager class
+
+    FILES TO READ FIRST:
+    - src/managers/projectile-manager.js (similar manager pattern)
+    - src/constants.js (for POWERUPS config after it's added)
+
+    REQUIREMENTS:
+    - Create src/managers/power-up-manager.js
+    - spawnPowerUp(x, y) - random type based on weights
+    - update(deltaTime) - move falling power-ups
+    - checkCollision(playerBounds) - return collected power-up
+    - activatePowerUp(type, player) - apply effect
+
+    Write the new file.
   `
 )
 ```
 
-### Step 4: Sequential Tasks (with Dependencies)
+#### Step 4: Lead Handles Integration
 
-For tasks that depend on others, launch them after the parallel tasks complete:
+**Critical Insight**: The Game.js integration should be done by the lead, NOT a worker:
 
 ```javascript
-// After implementation workers complete, launch test-writer
+// Lead handles Game.js because:
+// 1. Requires understanding outputs from ALL workers
+// 2. Needs to coordinate timing (when to call what)
+// 3. May require bug fixes from worker outputs
+// 4. Integration is the coordination point
+
+// Lead makes edits like:
+// - Import new classes
+// - Initialize in constructor
+// - Call update() in game loop
+// - Call draw() in render method
+// - Handle state transitions
+```
+
+#### Step 5: Sequential Tasks (Tests)
+
+After parallel workers complete:
+
+```javascript
+// Tests MUST come after implementation
 Task(
   subagent_type="general-purpose",
   model="haiku",
   prompt=`
     You are the test-writer worker agent.
-    Read .claude/agents/test-writer.md for your role instructions.
 
-    TASK: Write unit tests for name entry feature
+    TASK: Write unit tests for power-up system
 
-    Files to read first:
-    - src/managers/name-entry-manager.js (the implementation)
-    - tests/setup.js (test helpers)
+    FILES TO READ FIRST:
+    - src/entities/power-up.js (the implementation)
+    - src/managers/power-up-manager.js (the manager)
+    - tests/setup.js (test helpers and mocks)
+    - tests/entities/player.test.js (testing patterns)
 
-    Requirements:
-    - Test character cycling
-    - Test cursor movement
-    - Test confirmation
-    - Test boundary conditions
+    REQUIREMENTS:
+    - Create tests/power-ups.test.js
+    - Test PowerUp entity (position, bounds, visual state)
+    - Test PowerUpManager (spawning, collection, activation)
+    - Test Player power-up effects (shield, rapid fire, multi-shot)
+    - Mock AudioContext with createPeriodicWave, createOscillator
 
-    Create tests/managers/name-entry-manager.test.js
+    Create the test file.
   `
 )
 ```
 
-### Step 5: Integration & Review
+#### Step 6: Verify and Fix
 
 After workers complete:
 
-1. **Verify outputs**: Check that each file was created/modified correctly
-2. **Run tests**: `npm test` to ensure no regressions
-3. **Run build**: `npm run build` to check for errors
-4. **Manual review**: Scan code for consistency and integration issues
-5. **Final adjustments**: Make any necessary integration fixes
+```bash
+npm test        # Run tests - lead fixes any failures
+npm run build   # Verify build - lead fixes any errors
+```
+
+---
+
+## Lessons Learned (from implementing 8 features)
+
+### What Works Well
+
+| Practice | Why It Works |
+|----------|--------------|
+| **4-5 parallel workers max** | More than this causes context issues |
+| **Haiku for all workers** | Fast, cheap, good enough for focused tasks |
+| **Lead does Game.js integration** | Workers can't see each other's outputs |
+| **Tests after implementation** | Workers need to read finished code |
+| **Specific file paths in prompts** | Workers don't guess; they read what you specify |
+
+### Common Pitfalls and Fixes
+
+| Pitfall | Example | Fix |
+|---------|---------|-----|
+| **Case mismatch** | Worker returns `LEFT` but renderer expects `left` | Lead reviews and fixes consistency |
+| **Missing mock methods** | Tests fail with "createPeriodicWave is not a function" | Lead adds mock methods to test setup |
+| **Duplicate exports** | Worker adds constants that already exist | Lead checks for conflicts before spawning |
+| **Canvas scaling** | Touch coordinates don't account for CSS scaling | Lead researches and applies proper formula |
+
+### Integration Patterns That Work
+
+**Pattern 1**: Manager Creation
+```javascript
+// Worker creates: src/managers/combo-manager.js
+// Lead adds to Game.js:
+import { ComboManager } from './managers/combo-manager.js';
+this.comboManager = new ComboManager();
+// In update: this.comboManager.update(deltaTime);
+// In collision: this.comboManager.registerKill();
+```
+
+**Pattern 2**: Renderer Extension
+```javascript
+// Worker adds: drawComboHUD(ctx, combo, multiplier)
+// Lead calls in renderGame():
+if (this.comboManager.isActive()) {
+  this.renderer.drawComboHUD(ctx, combo, multiplier);
+}
+```
+
+**Pattern 3**: Sound Effect Addition
+```javascript
+// Worker adds: playComboMilestone(milestone)
+// Lead calls when combo reaches milestone:
+this.soundManager.playComboMilestone(combo);
+```
 
 ---
 
 ## Worker Agent Prompt Template
 
-When spawning a worker, use this template:
+Refined template based on successful implementations:
 
 ```markdown
 You are the {agent-name} worker agent.
-Read .claude/agents/{agent-name}.md for your role instructions.
-Read AGENTS.md for project conventions.
 
 TASK: {One-line description}
 
-CONTEXT:
-- {Why this task is needed}
-- {How it fits into the larger feature}
-
-FILES TO READ:
-- {file1.js} (reason)
-- {file2.js} (reason)
+FILES TO READ FIRST:
+- {file1.js} (to understand existing pattern)
+- {file2.js} (for constants/config reference)
 
 REQUIREMENTS:
-- {Requirement 1}
-- {Requirement 2}
-- {Requirement 3}
+- {Specific requirement 1}
+- {Specific requirement 2}
+- {Specific requirement 3}
 
 OUTPUT:
-- {What file(s) to create/modify}
+- {Create/Edit} {specific file path}
 
-QUALITY CHECKLIST:
-- [ ] Follows project code conventions
-- [ ] Uses constants from constants.js
-- [ ] Handles edge cases
-- [ ] Includes inline comments for complex logic
+IMPORTANT:
+- Use constants from src/constants.js, don't hardcode values
+- Follow existing code patterns in similar files
+- Include inline comments for non-obvious logic
+- Export the class/function at the bottom of the file
 ```
 
 ---
-
-## Example: Implementing a Feature
-
-### GitHub Issue: "Add Endless Mode"
-
-**Lead Agent Analysis:**
-
-```
-Feature: Endless Mode - continuous waves with increasing difficulty
-Subtasks:
-1. Add GameState.ENDLESS and game mode selection (game-engine)
-2. Create endless wave generation logic (game-engine)
-3. Add endless mode UI on start screen (renderer)
-4. Update high score to track endless mode separately (game-engine)
-5. Write tests (test-writer) - AFTER 1-4
-6. Update README (docs-writer) - AFTER 1-4
-```
-
-**Parallel Worker Launches:**
-
-```javascript
-// Workers 1, 2, 3, 4 can run in parallel (no dependencies)
-Task(subagent_type="general-purpose", model="haiku", prompt="[game-engine] Add ENDLESS state...")
-Task(subagent_type="general-purpose", model="haiku", prompt="[game-engine] Wave generation...")
-Task(subagent_type="general-purpose", model="haiku", prompt="[renderer] Endless mode UI...")
-Task(subagent_type="general-purpose", model="haiku", prompt="[game-engine] Endless high scores...")
-```
-
-**Sequential Workers (after parallel complete):**
-
-```javascript
-// Workers 5, 6 depend on 1-4 completing
-Task(subagent_type="general-purpose", model="haiku", prompt="[test-writer] Tests for endless mode...")
-Task(subagent_type="general-purpose", model="haiku", prompt="[docs-writer] Update README...")
-```
-
----
-
-## Model Selection Guide
-
-| Model | Use For | Cost |
-|-------|---------|------|
-| **Opus 4** | Lead agent, complex architectural decisions | High |
-| **Sonnet 4** | Workers doing complex implementation | Medium |
-| **Haiku 4** | Workers doing focused, well-scoped tasks | Low |
-
-**Rule of thumb**: Use Haiku for workers when the task is clearly defined with specific file inputs/outputs. Use Sonnet for workers when the task requires more reasoning.
 
 ## Code Conventions
 
@@ -305,43 +380,44 @@ Task(subagent_type="general-purpose", model="haiku", prompt="[docs-writer] Updat
 ```javascript
 // Each module should follow this structure:
 // 1. Imports
-// 2. Constants
-// 3. Class/function definitions
-// 4. Exports
+// 2. Local constants (if any)
+// 3. Class definition
+// 4. Export
 
-import { CONSTANTS } from './constants.js';
+import { GAME, PLAYER } from '../constants.js';
 
-const LOCAL_CONSTANT = 42;
+export class MyManager {
+  constructor() {
+    this.items = [];
+  }
 
-export class MyClass {
-  constructor() { /* ... */ }
+  update(deltaTime) {
+    // ...
+  }
+
+  reset() {
+    this.items = [];
+  }
 }
 ```
 
 ### Game Constants
-All magic numbers should be defined in `src/constants.js`:
+All magic numbers in `src/constants.js`:
 ```javascript
-export const GAME = {
-  WIDTH: 800,
-  HEIGHT: 600,
-  FPS: 60,
-  TICK_RATE: 1000 / 60
-};
+// EXISTING (don't duplicate):
+export const GAME = { WIDTH: 800, HEIGHT: 600, FPS: 60 };
+export const PLAYER = { SPEED: 5, LIVES: 3, WIDTH: 40, HEIGHT: 30 };
+export const ENEMY = { ROWS: 5, COLS: 11, DROP_DISTANCE: 8 };
 
-export const PLAYER = {
-  SPEED: 5,
-  LIVES: 3,
-  WIDTH: 40,
-  HEIGHT: 30
-};
-
-export const ENEMY = {
-  ROWS: 5,
-  COLS: 11,
-  SPEED: 1,
-  DROP_DISTANCE: 20
-};
+// ADDED in Phase 1-2:
+export const POWERUPS = { TYPES, DROP_CHANCE, DURATION, WEIGHTS };
+export const COMBO = { TIMEOUT, MULTIPLIERS, MILESTONES };
+export const FORMATIONS = { TYPES, ENTRANCE, COLORS };
+export const MUSIC = { BPM, TRACKS, NOTES };
+export const TOUCH_CONTROLS = { BUTTON_SIZE, POSITIONS, OPACITY };
 ```
+
+---
 
 ## Directory Structure
 
@@ -351,193 +427,259 @@ retro-arcade-game/
 ├── README.md                    # Project documentation
 ├── package.json                 # Dependencies and scripts
 ├── vite.config.js               # Build configuration
-├── vitest.config.js             # Test configuration
-├── index.html                   # Entry HTML
+├── index.html                   # Entry HTML with CRT styling
+├── .github/
+│   └── workflows/
+│       └── deploy.yml           # GitHub Pages deployment
 ├── .claude/
-│   └── agents/                  # Subagent definitions
+│   └── agents/                  # Worker agent definitions
 │       ├── game-engine.md
 │       ├── renderer.md
 │       ├── entity.md
 │       ├── audio.md
 │       ├── test-writer.md
-│       └── docs-writer.md
+│       ├── docs-writer.md
+│       ├── controller.md
+│       └── touch-controls.md
 ├── src/
 │   ├── main.js                  # Application entry
-│   ├── game.js                  # Main Game class
-│   ├── constants.js             # Game constants
+│   ├── game.js                  # Main Game class (600+ LOC)
+│   ├── constants.js             # All game constants (400+ LOC)
 │   ├── renderer/
-│   │   ├── canvas-renderer.js   # Canvas drawing
-│   │   └── sprite-sheet.js      # Sprite management
+│   │   ├── canvas-renderer.js   # Main renderer (900+ LOC)
+│   │   ├── starfield.js         # Parallax background
+│   │   └── touch-controls-renderer.js
 │   ├── entities/
-│   │   ├── entity.js            # Base entity class
-│   │   ├── player.js            # Player ship
+│   │   ├── player.js            # Player with shields, power-ups
 │   │   ├── enemy.js             # Alien enemy
-│   │   ├── projectile.js        # Bullet/laser
-│   │   └── bunker.js            # Defensive bunker
+│   │   ├── projectile.js        # Bullets with spread angles
+│   │   ├── bunker.js            # Defensive bunkers
+│   │   ├── mystery-ship.js      # Bonus UFO
+│   │   └── power-up.js          # Collectible power-ups
 │   ├── managers/
-│   │   ├── input-handler.js     # Keyboard input
-│   │   ├── enemy-manager.js     # Enemy formation
+│   │   ├── input-handler.js     # Keyboard + gamepad + touch
+│   │   ├── touch-control-manager.js
+│   │   ├── enemy-manager.js     # Enemy formations + difficulty
+│   │   ├── formation-generator.js  # 6 formation patterns
 │   │   ├── projectile-manager.js
+│   │   ├── power-up-manager.js
+│   │   ├── combo-manager.js     # Kill combos + multipliers
+│   │   ├── popup-manager.js     # Floating text popups
 │   │   ├── collision-detector.js
-│   │   └── score-manager.js
+│   │   ├── score-manager.js     # High scores + leaderboards
+│   │   └── name-entry-manager.js
 │   ├── audio/
-│   │   └── sound-manager.js     # Web Audio API
+│   │   ├── sound-manager.js     # 8-bit sound effects
+│   │   ├── music-manager.js     # Chiptune background music
+│   │   ├── pulse-oscillator.js  # NES 2A03-style synthesis
+│   │   └── arpeggiator.js       # Chord arpeggiation
 │   └── utils/
-│       ├── vector.js            # 2D vector math
 │       └── helpers.js           # Utility functions
-├── tests/
-│   ├── setup.js                 # Test setup
-│   ├── game.test.js
-│   ├── entities/
-│   │   ├── player.test.js
-│   │   └── enemy.test.js
-│   └── managers/
-│       └── collision-detector.test.js
-├── assets/
-│   ├── sprites/                 # Pixel art sprites
-│   └── sounds/                  # 8-bit sound effects
-└── docs/
-    └── api.md                   # API documentation
+└── tests/
+    ├── setup.js                 # Test setup + mocks
+    ├── game.test.js
+    ├── endless-mode.test.js
+    ├── power-ups.test.js
+    ├── combo-system.test.js
+    ├── formations.test.js
+    ├── music-manager.test.js
+    ├── touch-controls.test.js
+    ├── entities/
+    │   ├── player.test.js
+    │   └── enemy.test.js
+    ├── managers/
+    │   ├── collision-detector.test.js
+    │   ├── score-manager.test.js
+    │   ├── name-entry-manager.test.js
+    │   └── input-handler.test.js
+    └── renderer/
+        └── starfield.test.js
 ```
+
+---
 
 ## Development Workflow
 
 ### Commands
 ```bash
-# Install dependencies
-npm install
-
-# Start development server (hot reload)
-npm run dev
-
-# Run tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Build for production
-npm run build
-
-# Lint code
-npm run lint
+npm install          # Install dependencies
+npm run dev          # Start dev server (hot reload)
+npm test             # Run tests in watch mode
+npm run test:run     # Run tests once (CI)
+npm run build        # Build for production
+npm run build:gh-pages  # Build with GitHub Pages base path
+npm run deploy       # Deploy to GitHub Pages
 ```
 
 ### Git Conventions
-- Use conventional commits: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`
+- Conventional commits: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`
 - Branch naming: `feature/`, `fix/`, `refactor/`
-
-## Testing Requirements
-
-### Unit Tests
-- Each entity class must have corresponding tests
-- Collision detection must have edge case tests
-- Minimum 80% code coverage
-
-### Test Structure
-```javascript
-import { describe, it, expect, beforeEach } from 'vitest';
-import { Player } from '../src/entities/player.js';
-
-describe('Player', () => {
-  let player;
-
-  beforeEach(() => {
-    player = new Player(400, 550);
-  });
-
-  it('should initialize at correct position', () => {
-    expect(player.x).toBe(400);
-    expect(player.y).toBe(550);
-  });
-
-  it('should move left when moveLeft is called', () => {
-    const initialX = player.x;
-    player.moveLeft();
-    expect(player.x).toBeLessThan(initialX);
-  });
-});
-```
-
-## Game Mechanics
-
-### Player Controls
-- **Left/Right Arrow** or **A/D**: Move ship
-- **Space**: Fire projectile
-- **P**: Pause game
-- **R**: Restart (when game over)
-
-### Scoring
-| Enemy Type | Points |
-|------------|--------|
-| Bottom row | 10     |
-| Middle row | 20     |
-| Top row    | 30     |
-| Mystery ship | 50-300 (random) |
-
-### Difficulty Progression
-- Enemies speed up as their count decreases
-- Enemy fire rate increases per level
-- Mystery ship appears randomly every 20-30 seconds
-
-## Common Tasks
-
-### Adding a New Entity
-1. Create class in `src/entities/` extending `Entity`
-2. Implement `update()` and `draw()` methods
-3. Register with appropriate manager
-4. Add tests in `tests/entities/`
-
-### Adding a New Sound
-1. Add audio file to `assets/sounds/`
-2. Register in `SoundManager.loadSounds()`
-3. Call via `soundManager.play('soundName')`
-
-### Modifying Game Balance
-1. Update constants in `src/constants.js`
-2. Run tests to verify no regressions
-3. Playtest for feel
-
-## Agent-Specific Instructions
-
-### For game-engine-agent
-- Focus on game loop timing and physics
-- Ensure 60 FPS performance
-- Handle pause/resume state cleanly
-
-### For renderer-agent
-- Use requestAnimationFrame for smooth rendering
-- Implement dirty rectangle optimization if needed
-- Support retina/HiDPI displays
-
-### For entity-agent
-- Keep entities lightweight (no rendering logic)
-- Use composition over inheritance where sensible
-- Implement proper bounding boxes for collision
-
-### For test-agent
-- Mock canvas context in tests
-- Test edge cases (screen boundaries, collision corners)
-- Include performance benchmarks
-
-## Troubleshooting
-
-### Canvas Not Rendering
-- Check if canvas element exists in DOM
-- Verify context is obtained: `canvas.getContext('2d')`
-- Ensure game loop is started
-
-### Collisions Not Detecting
-- Verify bounding box calculations
-- Check coordinate systems (screen vs game space)
-- Log collision rectangles for visual debugging
-
-### Audio Not Playing
-- User interaction required before Web Audio
-- Check audio context state
-- Verify audio files are loaded
+- PR per feature, closes GitHub issue
 
 ---
 
-*This AGENTS.md follows the standard at https://agents.md/ for AI agent collaboration.*
+## Testing Requirements
+
+### Test File Naming
+- Feature tests: `tests/{feature}.test.js` (e.g., `power-ups.test.js`)
+- Entity tests: `tests/entities/{entity}.test.js`
+- Manager tests: `tests/managers/{manager}.test.js`
+
+### Mock Setup
+The test setup must include:
+```javascript
+// tests/setup.js mock essentials:
+const mockAudioContext = {
+  createOscillator: () => mockOscillator,
+  createGain: () => mockGain,
+  createPeriodicWave: () => ({}),  // IMPORTANT: Added for enhanced music
+  currentTime: 0,
+  destination: {}
+};
+
+const mockOscillator = {
+  connect: vi.fn(),
+  start: vi.fn(),
+  stop: vi.fn(),
+  setPeriodicWave: vi.fn(),  // IMPORTANT: Added for pulse oscillator
+  frequency: { setValueAtTime: vi.fn() },
+  type: 'square'
+};
+```
+
+### Test Counts by Feature
+| Feature | Tests | File |
+|---------|-------|------|
+| Core game | 40+ | game.test.js |
+| Endless mode | 51 | endless-mode.test.js |
+| Power-ups | 102 | power-ups.test.js |
+| Combo system | 124 | combo-system.test.js |
+| Formations | 137 | formations.test.js |
+| Music | 69 | music-manager.test.js |
+| Touch controls | 112 | touch-controls.test.js |
+| **Total** | **771+** | |
+
+---
+
+## Game Features
+
+### Controls
+| Input | Keyboard | Gamepad | Touch |
+|-------|----------|---------|-------|
+| Move | ←→ / AD | D-Pad / Left Stick | Left/Right buttons |
+| Fire | Space | A / RB / RT | Fire button |
+| Pause | P / Esc | Start | Pause button |
+| Mute | M | Y | - |
+| Mode Select | ↑↓ | D-Pad Up/Down | - |
+| Name Entry | ↑↓ + Enter | D-Pad + A | - |
+
+### Scoring & Combos
+| Enemy | Points | With Combo |
+|-------|--------|------------|
+| Bottom row | 10 | 10 × multiplier |
+| Middle row | 20 | 20 × multiplier |
+| Top row | 30 | 30 × multiplier |
+| Mystery ship | 50-300 | × multiplier |
+
+| Combo | Multiplier |
+|-------|------------|
+| 2 kills | ×1.5 |
+| 3 kills | ×2.0 |
+| 4 kills | ×2.5 |
+| 5+ kills | ×3.0 (max) |
+
+### Power-ups
+| Type | Color | Effect | Duration |
+|------|-------|--------|----------|
+| Shield | Cyan | Absorbs 1 hit | Until hit |
+| Rapid Fire | Orange | 50% faster fire | 10 sec |
+| Multi-Shot | Magenta | 3-way spread | 8 sec |
+| Bomb | Yellow | Clear all enemies | Instant |
+| Extra Life | Green | +1 life | Instant |
+
+### Formations
+| Pattern | Levels | Description |
+|---------|--------|-------------|
+| Classic | 1-2 | Standard grid |
+| V-Shape | 3-4 | Inverted V |
+| Diamond | 5-6 | Rhombus shape |
+| Spiral | 7-8 | Galaxy spiral |
+| Cross | 9-10 | Plus sign |
+| Random | 11+ | Chaotic scatter |
+
+---
+
+## Troubleshooting
+
+### Tests Failing with Mock Errors
+```javascript
+// Problem: "createPeriodicWave is not a function"
+// Solution: Add to test setup mock:
+createPeriodicWave: () => ({})
+```
+
+### Touch Controls Not Working
+```javascript
+// Problem: Touch coordinates don't match button positions
+// Solution: Scale coordinates by canvas CSS ratio:
+const scaleX = canvas.width / rect.width;
+const scaleY = canvas.height / rect.height;
+const x = (touch.clientX - rect.left) * scaleX;
+const y = (touch.clientY - rect.top) * scaleY;
+```
+
+### Music Not Playing
+```javascript
+// Problem: AudioContext not started
+// Solution: Start after user interaction:
+document.addEventListener('click', () => {
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+}, { once: true });
+```
+
+### GitHub Pages Deployment Shows Old Version
+```bash
+# Problem: Browser caching old bundle
+# Solution: Hard refresh or wait for CDN propagation
+Ctrl+Shift+R  # Hard refresh
+# Or wait 1-5 minutes for GitHub CDN to update
+```
+
+---
+
+## Quick Reference for AI Agents
+
+### When Starting a New Feature
+
+1. **Read this AGENTS.md** for conventions
+2. **Read the GitHub Issue** for requirements
+3. **Read relevant source files** before writing code
+4. **Create a todo list** with 4-8 subtasks
+5. **Launch parallel workers** (3-4 max at once)
+6. **Lead handles Game.js integration**
+7. **Launch test-writer worker** after implementation
+8. **Run `npm test` and `npm run build`** to verify
+
+### Model Selection
+
+| Agent | Model | Reason |
+|-------|-------|--------|
+| Lead | Opus 4 | Complex orchestration, bug fixing |
+| All workers | Haiku 4 | Fast, cheap, focused tasks |
+
+### Worker Output Expectations
+
+Workers should:
+- Read files specified in prompt FIRST
+- Follow existing code patterns
+- Use constants from constants.js
+- Write complete, working code
+- Not modify files outside their scope
+
+---
+
+*This AGENTS.md reflects lessons learned from implementing Phase 1 and Phase 2.*
 *Scaffolded using goose with Claude Code's lead/worker pattern.*
+*Last updated: December 2024*
