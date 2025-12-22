@@ -379,6 +379,11 @@ export class Game {
       if (this.nameEntryManager.update(deltaTime)) {
         // Transition to game over screen (now showing high scores)
         this.state = GameState.GAME_OVER;
+        // Play game over music
+        if (this.musicManager) {
+          this.musicManager.playTrack('gameOver');
+          this.currentMusicTrack = 'gameOver';
+        }
       }
       return;
     }
@@ -782,7 +787,7 @@ export class Game {
   levelComplete() {
     this.state = GameState.LEVEL_COMPLETE;
     this.levelTransitionTimer = 0;
-    this.soundManager.playLevelComplete();
+    /*this.soundManager.playLevelComplete();*/
 
     // Play victory jingle (one-shot) - will return to battle music when next level starts
     if (this.musicManager) {
@@ -817,7 +822,6 @@ export class Game {
     } else {
       // Regular game over
       this.state = GameState.GAME_OVER;
-      this.soundManager.playGameOver();
       // Play game over music
       if (this.musicManager) {
         this.musicManager.playTrack('gameOver');
