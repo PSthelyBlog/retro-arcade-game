@@ -930,7 +930,7 @@ describe('Power-up System', () => {
       manager.spawn(100, 100, 'SHIELD');
       manager.spawn(150, 150, 'RAPID_FIRE');
 
-      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
       manager.trySpawn(200, 200);
       spy.mockRestore();
 
