@@ -343,7 +343,7 @@ describe('Power-up System', () => {
 
     // trySpawn tests
     it('should spawn when random is within DROP_CHANCE', () => {
-      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.1); // Less than DROP_CHANCE (0.15)
+      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.01); // Less than DROP_CHANCE (0.15)
 
       const result = manager.trySpawn(100, 100);
 
@@ -378,7 +378,7 @@ describe('Power-up System', () => {
     });
 
     it('should spawn valid random type from trySpawn', () => {
-      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
 
       manager.trySpawn(100, 100);
 
@@ -915,7 +915,7 @@ describe('Power-up System', () => {
     });
 
     it('should handle rapid respawn attempts', () => {
-      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
 
       for (let i = 0; i < 10; i++) {
         manager.trySpawn(100 + i * 50, 100);
